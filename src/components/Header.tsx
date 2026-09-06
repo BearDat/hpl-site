@@ -13,7 +13,7 @@ export function Header() {
   return (
     <header className="flex items-center justify-between bg-ink px-14 py-[18px] text-paper">
       <Link href="/" className="flex items-center gap-4">
-        <Logo className="h-[38px] w-[46px]" />
+        <Logo className="h-9 w-auto" />
         <div>
           <div className="font-display text-[22px] leading-none tracking-wide">
             HCBB PATHWAY
