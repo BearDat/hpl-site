@@ -1,27 +1,30 @@
-import { scores, teamsByCode, type Score } from "@/lib/data";
+import type { ScoreboardGame } from "@/lib/queries";
 import { TeamCrest } from "./TeamCrest";
 
 function TeamRow({
   code,
+  color,
+  logoUrl,
   runs,
   dim,
 }: {
   code: string;
-  runs?: number;
+  color: string;
+  logoUrl: string | null;
+  runs: number | null;
   dim: boolean;
 }) {
-  const team = teamsByCode[code];
   return (
     <div className="flex items-center justify-between gap-4 py-0.5">
       <div className="flex items-center gap-1.5">
-        <TeamCrest color={team.color} className="h-3.5 w-3" />
+        <TeamCrest color={color} logoUrl={logoUrl} className="h-3.5 w-3" />
         <span
           className={`text-xs ${dim ? "font-semibold text-muted" : "font-extrabold text-paper"}`}
         >
           {code}
         </span>
       </div>
-      {runs !== undefined && (
+      {runs !== null && (
         <span
           className={`text-sm ${dim ? "font-extrabold text-muted" : "font-extrabold text-paper"}`}
         >
@@ -32,16 +35,12 @@ function TeamRow({
   );
 }
 
-function ScoreCard({ score, first }: { score: Score; first: boolean }) {
-  const isLive = score.status.kind === "live";
+function ScoreCard({ game, first }: { game: ScoreboardGame; first: boolean }) {
+  const isLive = game.status === "LIVE";
   const awayWins =
-    score.away.runs !== undefined &&
-    score.home.runs !== undefined &&
-    score.away.runs > score.home.runs;
+    game.away.runs !== null && game.home.runs !== null && game.away.runs > game.home.runs;
   const homeWins =
-    score.away.runs !== undefined &&
-    score.home.runs !== undefined &&
-    score.home.runs > score.away.runs;
+    game.away.runs !== null && game.home.runs !== null && game.home.runs > game.away.runs;
 
   return (
     <div
@@ -53,25 +52,38 @@ function ScoreCard({ score, first }: { score: Score; first: boolean }) {
         <div className="mb-1.5 flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 bg-accent" />
           <span className="text-[9px] font-extrabold tracking-wider text-accent">
-            {score.status.label}
+            {game.statusLabel}
           </span>
         </div>
       ) : (
         <div className="mb-1.5 text-[9px] font-extrabold tracking-wider text-muted">
-          {score.status.label}
+          {game.statusLabel}
         </div>
       )}
-      <TeamRow code={score.away.code} runs={score.away.runs} dim={homeWins} />
-      <TeamRow code={score.home.code} runs={score.home.runs} dim={awayWins} />
+      <TeamRow
+        code={game.away.code}
+        color={game.away.color}
+        logoUrl={game.away.logoUrl}
+        runs={game.away.runs}
+        dim={homeWins}
+      />
+      <TeamRow
+        code={game.home.code}
+        color={game.home.color}
+        logoUrl={game.home.logoUrl}
+        runs={game.home.runs}
+        dim={awayWins}
+      />
     </div>
   );
 }
 
-export function ScoresRibbon() {
+export function ScoresRibbon({ games }: { games: ScoreboardGame[] }) {
+  if (games.length === 0) return null;
   return (
     <div className="flex overflow-x-auto border-b-[3px] border-ink bg-ink-soft px-14">
-      {scores.map((score, i) => (
-        <ScoreCard key={i} score={score} first={i === 0} />
+      {games.map((game, i) => (
+        <ScoreCard key={game.id} game={game} first={i === 0} />
       ))}
     </div>
   );

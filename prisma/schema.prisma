@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Teams & league structure -----------------------------------------
+
+model Team {
+  id            String   @id @default(cuid())
+  name          String
+  shortCode     String   @unique
+  primaryColor  String
+  secondaryColor String?
+  logoUrl       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  players            Player[]
+  seasonTeams        SeasonTeam[]
+  homeGames          Game[]              @relation("HomeTeam")
+  awayGames          Game[]              @relation("AwayTeam")
+  forfeitWins        Game[]              @relation("ForfeitWinner")
+  transactionsFrom   TransactionAsset[]  @relation("FromTeam")
+  transactionsTo     TransactionAsset[]  @relation("ToTeam")
+}
+
+model Season {
+  id                   String   @id @default(cuid())
+  name                 String
+  isCurrent            Boolean  @default(false)
+  playoffTeamCount     Int      @default(4)
+  playoffSeriesLengths Int[]    @default([3, 5, 7])
+  playoffReseed        Boolean  @default(true)
+  createdAt            DateTime @default(now())
+
+  divisions   Division[]
+  seasonTeams SeasonTeam[]
+  games       Game[]
+  playerStats PlayerSeasonStat[]
+}
+
+model Division {
+  id       String @id @default(cuid())
+  name     String
+  order    Int    @default(0)
+  seasonId String
+  season   Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  seasonTeams SeasonTeam[]
+
+  @@unique([seasonId, name])
+}
+
+model SeasonTeam {
+  id         String    @id @default(cuid())
+  seasonId   String
+  teamId     String
+  divisionId String?
+  season     Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  division   Division? @relation(fields: [divisionId], references: [id], onDelete: SetNull)
+
+  @@unique([seasonId, teamId])
+}
+
+// --- Schedule & scores ---------------------------------------------------
+
+enum GameStatus {
+  SCHEDULED
+  LIVE
+  FINAL
+  FORFEIT
+  POSTPONED
+}
+
+model Game {
+  id               String     @id @default(cuid())
+  seasonId         String
+  round            String
+  scheduledTime    String?
+  locationCode     String?
+  homeTeamId       String
+  awayTeamId       String
+  status           GameStatus @default(SCHEDULED)
+  homeScore        Int?
+  awayScore        Int?
+  innings          Int?
+  forfeitWinnerId  String?
+  notes            String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  season         Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  homeTeam       Team   @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam       Team   @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  forfeitWinner  Team?  @relation("ForfeitWinner", fields: [forfeitWinnerId], references: [id])
+
+  @@index([seasonId, round])
+}
+
+// --- Roster ---------------------------------------------------------------
+
+enum PlayerStatus {
+  ACTIVE
+  FREE_AGENT
+  RETIRED
+}
+
+model Player {
+  id        String       @id @default(cuid())
+  name      String
+  position  String
+  teamId    String?
+  status    PlayerStatus @default(FREE_AGENT)
+  createdAt DateTime     @default(now())
+
+  team               Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  transactionAssets  TransactionAsset[]
+  prospectRank       ProspectRank?
+  seasonStats        PlayerSeasonStat[]
+}
+
+model PlayerSeasonStat {
+  id           String  @id @default(cuid())
+  playerId     String
+  seasonId     String
+  battingAvg   Float?
+  homeRuns     Int?
+  rbi          Int?
+  stolenBases  Int?
+  era          Float?
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, seasonId])
+}
+
+enum TransactionType {
+  SIGNING
+  RELEASE
+  TRADE
+}
+
+model Transaction {
+  id     String          @id @default(cuid())
+  type   TransactionType
+  date   DateTime        @default(now())
+  notes  String?
+
+  assets TransactionAsset[]
+}
+
+model TransactionAsset {
+  id            String @id @default(cuid())
+  transactionId String
+  playerId      String
+  fromTeamId    String?
+  toTeamId      String?
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  player      Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  fromTeam    Team?       @relation("FromTeam", fields: [fromTeamId], references: [id])
+  toTeam      Team?       @relation("ToTeam", fields: [toTeamId], references: [id])
+}
+
+// --- News / media / prospects ----------------------------------------------
+
+model NewsArticle {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  body        String
+  heroImageUrl String?
+  published   Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  media MediaAsset[]
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model MediaAsset {
+  id          String    @id @default(cuid())
+  url         String
+  type        MediaType
+  caption     String?
+  isHighlight Boolean   @default(false)
+  articleId   String?
+  createdAt   DateTime  @default(now())
+
+  article NewsArticle? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+}
+
+model ProspectRank {
+  id           String   @id @default(cuid())
+  playerId     String   @unique
+  rank         Int
+  previousRank Int?
+  updatedAt    DateTime @updatedAt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+// --- Admin ------------------------------------------------------------------
+
+enum AdminRole {
+  OWNER
+  ADMIN
+  EDITOR
+}
+
+model AdminUser {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  role      AdminRole @default(EDITOR)
+  createdAt DateTime  @default(now())
+}

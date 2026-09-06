@@ -1,16 +1,21 @@
-import { statLeaders } from "@/lib/data";
+type StatLeader = {
+  value: string;
+  label: string;
+  player: string;
+  team: string;
+};
 
-export function StatLeadersCard() {
+export function StatLeadersCard({ leaders }: { leaders: StatLeader[] }) {
   return (
     <div className="flex flex-col border-[3px] border-ink p-[18px]">
       <div className="mb-2.5 text-[11px] font-extrabold tracking-wider opacity-55">
         STAT LEADERS
       </div>
-      {statLeaders.map((stat, i) => (
+      {leaders.map((stat, i) => (
         <div
           key={stat.label}
           className={`flex items-center gap-2.5 py-1.5 ${
-            i < statLeaders.length - 1 ? "border-b border-ink/10" : ""
+            i < leaders.length - 1 ? "border-b border-ink/10" : ""
           }`}
         >
           <div className="w-[50px] flex-shrink-0 font-display text-[19px] text-accent">

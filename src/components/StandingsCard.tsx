@@ -1,7 +1,7 @@
-import { divisions } from "@/lib/data";
+import type { StandingsDivision } from "@/lib/queries";
 import { TeamCrest } from "./TeamCrest";
 
-export function StandingsCard() {
+export function StandingsCard({ divisions }: { divisions: StandingsDivision[] }) {
   return (
     <div className="flex flex-col border-[3px] border-ink p-4">
       <div className="mb-0.5 text-[11px] font-bold tracking-wider opacity-55">
@@ -14,14 +14,18 @@ export function StandingsCard() {
           </div>
           {division.teams.map((team, i) => (
             <div
-              key={team.code}
+              key={team.id}
               className={`flex items-center gap-1.5 py-1 text-[11px] ${
                 i === 0 ? "font-bold" : ""
               } ${
                 i < division.teams.length - 1 ? "border-b border-ink/10" : ""
               }`}
             >
-              <TeamCrest color={team.color} className="h-[13px] w-[11px]" />
+              <TeamCrest
+                color={team.primaryColor}
+                logoUrl={team.logoUrl}
+                className="h-[13px] w-[11px]"
+              />
               <span className="min-w-0 flex-1 truncate">{team.name}</span>
               <span className="flex-shrink-0">
                 {team.wins}&ndash;{team.losses}

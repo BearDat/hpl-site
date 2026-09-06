@@ -1,10 +1,18 @@
 export function TeamCrest({
   color,
+  logoUrl,
   className,
 }: {
   color: string;
+  logoUrl?: string | null;
   className?: string;
 }) {
+  if (logoUrl) {
+    // Arbitrary user-uploaded dimensions; skip the built-in image optimizer.
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={logoUrl} alt="" className={`${className ?? ""} object-contain`} />;
+  }
+
   return (
     <svg
       viewBox="0 0 28 32"

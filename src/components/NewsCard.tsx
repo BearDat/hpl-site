@@ -1,6 +1,4 @@
-import { topStory } from "@/lib/data";
-
-export function NewsCard() {
+export function NewsCard({ article }: { article: { title: string } | null }) {
   return (
     <div className="flex flex-col border-[3px] border-ink">
       <div
@@ -23,10 +21,10 @@ export function NewsCard() {
       </div>
       <div className="py-5 px-[22px]">
         <div className="mb-2 text-[11px] font-extrabold tracking-wider text-accent">
-          {topStory.kicker}
+          TOP STORY
         </div>
         <div className="font-display text-[21px] leading-tight">
-          {topStory.headline}
+          {article ? article.title.toUpperCase() : "NO STORIES PUBLISHED YET"}
         </div>
       </div>
     </div>
