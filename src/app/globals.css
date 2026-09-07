@@ -2,18 +2,56 @@
 
 :root {
   --color-paper: #f2f4fa;
+  --color-surface: #ffffff;
   --color-ink: #00278c;
-  --color-ink-soft: #0b34a0;
+  --color-muted: #6b7390;
   --color-accent: #006cff;
-  --color-muted: #8b93ac;
+  --color-accent-warm: #c1391f;
+
+  /* "Brand" blocks (header, pipeline card, badges) stay a constant navy
+     identity color across both themes, like a logo would — they don't
+     invert the way page text/background do. */
+  --color-brand: #00278c;
+  --color-brand-soft: #0b34a0;
+  --color-on-brand: #f2f4fa;
+}
+
+[data-theme="dark"] {
+  --color-paper: #0a0e1a;
+  --color-surface: #131a2e;
+  --color-ink: #e7ebfa;
+  --color-muted: #8a94b8;
+  --color-accent: #5aa5ff;
+  --color-accent-warm: #e2795a;
+  --color-brand: #142252;
+  --color-brand-soft: #1c2f66;
+  --color-on-brand: #f2f4fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-paper: #0a0e1a;
+    --color-surface: #131a2e;
+    --color-ink: #e7ebfa;
+    --color-muted: #8a94b8;
+    --color-accent: #5aa5ff;
+    --color-accent-warm: #e2795a;
+    --color-brand: #142252;
+    --color-brand-soft: #1c2f66;
+    --color-on-brand: #f2f4fa;
+  }
 }
 
 @theme inline {
   --color-paper: var(--color-paper);
+  --color-surface: var(--color-surface);
   --color-ink: var(--color-ink);
-  --color-ink-soft: var(--color-ink-soft);
-  --color-accent: var(--color-accent);
   --color-muted: var(--color-muted);
+  --color-accent: var(--color-accent);
+  --color-accent-warm: var(--color-accent-warm);
+  --color-brand: var(--color-brand);
+  --color-brand-soft: var(--color-brand-soft);
+  --color-on-brand: var(--color-on-brand);
   --font-display: var(--font-archivo-black);
   --font-sans: var(--font-archivo);
 }

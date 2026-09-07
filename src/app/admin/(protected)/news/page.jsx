@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { createArticle, addMedia, deleteMedia } from "@/lib/actions/news";
-import { addProspect, updateProspectRank, removeProspect } from "@/lib/actions/prospects";
+import { addProspect, moveProspectRank, removeProspect } from "@/lib/actions/prospects";
 import { Panel, Field, inputClass, buttonClass, buttonSecondaryClass } from "@/components/admin/ui";
 import { ArticleRow } from "@/components/admin/ArticleRow";
 export const dynamic = "force-dynamic";
@@ -102,22 +102,31 @@ export default async function NewsPage() {
       </Panel>
 
       <Panel title="Top Prospects">
+        <p className="mb-3 text-xs opacity-55">Use the arrows to reorder — no need to retype ranks.</p>
         <div className="mb-4 flex flex-col gap-2">
-          {prospects.map((p) => {
-            const updateWithId = updateProspectRank.bind(null, p.id);
+          {prospects.map((p, i) => {
+            const moveUp = moveProspectRank.bind(null, p.id, "up");
+            const moveDown = moveProspectRank.bind(null, p.id, "down");
             return (<div key={p.id} className="flex items-center gap-3 border-b border-ink/10 py-2 text-sm">
+                <span className="w-6 flex-shrink-0 font-display text-base opacity-55">{p.rank}</span>
                 <span className="flex-1">
                   {p.player.name}{" "}
                   <span className="opacity-55">
                     · {p.player.team?.name ?? "Free Agent"}
                   </span>
                 </span>
-                <form action={updateWithId} className="flex items-center gap-2">
-                  <input type="number" name="rank" defaultValue={p.rank} className={`${inputClass} !w-16`}/>
-                  <button type="submit" className={`${buttonSecondaryClass} !text-[10px]`}>
-                    Update Rank
-                  </button>
-                </form>
+                <div className="flex items-center gap-1">
+                  <form action={moveUp}>
+                    <button type="submit" disabled={i === 0} className={`${buttonSecondaryClass} !px-2 !py-1 !text-xs disabled:opacity-30`}>
+                      ▲
+                    </button>
+                  </form>
+                  <form action={moveDown}>
+                    <button type="submit" disabled={i === prospects.length - 1} className={`${buttonSecondaryClass} !px-2 !py-1 !text-xs disabled:opacity-30`}>
+                      ▼
+                    </button>
+                  </form>
+                </div>
                 <form action={removeProspect}>
                   <input type="hidden" name="prospectRankId" value={p.id}/>
                   <button type="submit" className={`${buttonSecondaryClass} !text-[10px]`}>
@@ -129,15 +138,13 @@ export default async function NewsPage() {
           {prospects.length === 0 && <p className="text-sm opacity-60">No ranked prospects yet.</p>}
         </div>
         <form action={addProspect} className="flex items-end gap-3">
-          <Field label="Add player">
+          <input type="hidden" name="rank" value={prospects.length + 1}/>
+          <Field label="Add player to bottom of pipeline">
             <select name="playerId" required className={inputClass}>
               {unrankedPlayers.map((p) => (<option key={p.id} value={p.id}>
                   {p.name}
                 </option>))}
             </select>
-          </Field>
-          <Field label="Rank">
-            <input type="number" name="rank" required defaultValue={prospects.length + 1} className={`${inputClass} !w-20`}/>
           </Field>
           <button type="submit" className={buttonClass}>
             Add to Pipeline

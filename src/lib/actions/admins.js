@@ -1,16 +1,23 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { hashPassword } from "@/lib/auth";
 export async function addAdmin(formData) {
     const name = String(formData.get("name") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
+    const username = String(formData.get("username") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
     const role = String(formData.get("role") ?? "EDITOR");
-    if (!name || !email)
-        throw new Error("Name and email are required.");
-    const existing = await prisma.adminUser.findUnique({ where: { email } });
+    if (!name || !email || !username || !password)
+        throw new Error("Name, email, username, and password are required.");
+    if (password.length < 8)
+        throw new Error("Password must be at least 8 characters.");
+    const existing = await prisma.adminUser.findFirst({ where: { OR: [{ email }, { username }] } });
     if (existing)
-        throw new Error("An admin with that email already exists.");
-    await prisma.adminUser.create({ data: { name, email, role } });
+        throw new Error("An admin with that email or username already exists.");
+    await prisma.adminUser.create({
+        data: { name, email, username, passwordHash: hashPassword(password), role },
+    });
     revalidatePath("/admin/admins");
 }
 export async function updateAdminRole(adminId, formData) {

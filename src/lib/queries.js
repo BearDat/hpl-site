@@ -172,13 +172,33 @@ function statusLabel(game) {
             return game.innings && game.innings !== 9 ? `FINAL/${game.innings}` : "FINAL";
         case "FORFEIT":
             return "FORFEIT";
-        case "LIVE":
-            return "LIVE";
         case "POSTPONED":
             return "POSTPONED";
         default:
             return game.scheduledTime ?? "SCHEDULED";
     }
+}
+function toScoreboardGame(g) {
+    return {
+        id: g.id,
+        round: g.round,
+        status: g.status,
+        statusLabel: statusLabel(g),
+        away: {
+            code: g.awayTeam.shortCode,
+            name: g.awayTeam.name,
+            color: g.awayTeam.primaryColor,
+            logoUrl: g.awayTeam.logoUrl,
+            runs: g.awayScore,
+        },
+        home: {
+            code: g.homeTeam.shortCode,
+            name: g.homeTeam.name,
+            color: g.homeTeam.primaryColor,
+            logoUrl: g.homeTeam.logoUrl,
+            runs: g.homeScore,
+        },
+    };
 }
 export async function getScoreboardGames(seasonId, limit = 6) {
     const games = await prisma.game.findMany({
@@ -187,25 +207,21 @@ export async function getScoreboardGames(seasonId, limit = 6) {
         orderBy: [{ round: "desc" }, { createdAt: "asc" }],
         take: limit,
     });
-    return games
-        .reverse()
-        .map((g) => ({
-        id: g.id,
-        status: g.status,
-        statusLabel: statusLabel(g),
-        away: {
-            code: g.awayTeam.shortCode,
-            color: g.awayTeam.primaryColor,
-            logoUrl: g.awayTeam.logoUrl,
-            runs: g.awayScore,
-        },
-        home: {
-            code: g.homeTeam.shortCode,
-            color: g.homeTeam.primaryColor,
-            logoUrl: g.homeTeam.logoUrl,
-            runs: g.homeScore,
-        },
-    }));
+    return games.reverse().map(toScoreboardGame);
+}
+export async function getAllScores(seasonId) {
+    const games = await prisma.game.findMany({
+        where: { seasonId, playoffSeriesId: null },
+        include: { homeTeam: true, awayTeam: true },
+        orderBy: [{ round: "asc" }, { createdAt: "asc" }],
+    });
+    const rounds = new Map();
+    for (const g of games) {
+        if (!rounds.has(g.round))
+            rounds.set(g.round, []);
+        rounds.get(g.round).push(toScoreboardGame(g));
+    }
+    return Array.from(rounds.entries()).map(([round, roundGames]) => ({ round, games: roundGames }));
 }
 export async function getPipelineTop(n = 5) {
     const ranks = await prisma.prospectRank.findMany({
@@ -234,19 +250,19 @@ export async function getPipelineTop(n = 5) {
                     : { direction: "down", value: r.rank - r.previousRank },
     }));
 }
+const STAT_CATEGORIES = [
+    { key: "battingAvg", label: "AVG", better: "higher", format: (v) => v.toFixed(3).replace(/^0/, "") },
+    { key: "homeRuns", label: "HR", better: "higher", format: (v) => String(v) },
+    { key: "rbi", label: "RBI", better: "higher", format: (v) => String(v) },
+    { key: "era", label: "ERA", better: "lower", format: (v) => v.toFixed(2) },
+    { key: "stolenBases", label: "SB", better: "higher", format: (v) => String(v) },
+];
 export async function getStatLeaders(seasonId) {
     const stats = await prisma.playerSeasonStat.findMany({
-        where: { seasonId },
+        where: { seasonId, isPlayoffs: false },
         include: { player: { include: { team: true } } },
     });
-    const categories = [
-        { key: "battingAvg", label: "AVG", better: "higher", format: (v) => v.toFixed(3).replace(/^0/, "") },
-        { key: "homeRuns", label: "HR", better: "higher", format: (v) => String(v) },
-        { key: "rbi", label: "RBI", better: "higher", format: (v) => String(v) },
-        { key: "era", label: "ERA", better: "lower", format: (v) => v.toFixed(2) },
-        { key: "stolenBases", label: "SB", better: "higher", format: (v) => String(v) },
-    ];
-    return categories
+    return STAT_CATEGORIES
         .map((cat) => {
         const withStat = stats.filter((s) => typeof s[cat.key] === "number");
         if (withStat.length === 0)
@@ -267,6 +283,28 @@ export async function getStatLeaders(seasonId) {
         };
     })
         .filter((x) => x !== null);
+}
+export async function getFullStatLeaders(seasonId, n = 10) {
+    const stats = await prisma.playerSeasonStat.findMany({
+        where: { seasonId, isPlayoffs: false },
+        include: { player: { include: { team: true } } },
+    });
+    return STAT_CATEGORIES.map((cat) => {
+        const withStat = stats
+            .filter((s) => typeof s[cat.key] === "number")
+            .sort((a, b) => cat.better === "higher" ? b[cat.key] - a[cat.key] : a[cat.key] - b[cat.key])
+            .slice(0, n);
+        return {
+            key: cat.key,
+            label: cat.label,
+            entries: withStat.map((s) => ({
+                value: cat.format(s[cat.key]),
+                player: s.player.name,
+                playerSlug: s.player.slug,
+                team: s.player.team?.shortCode ?? "FA",
+            })),
+        };
+    }).filter((cat) => cat.entries.length > 0);
 }
 export async function hasPlayoffsStarted(seasonId) {
     const count = await prisma.playoffSeries.count({ where: { seasonId } });
@@ -326,15 +364,24 @@ function sumField(rows, key) {
 function weightedAvg(rows, valueKey, weightKey) {
     let num = 0;
     let den = 0;
+    const unweighted = [];
     for (const r of rows) {
         const value = r[valueKey];
+        if (value == null)
+            continue;
+        unweighted.push(value);
         const weight = r[weightKey] ?? 0;
-        if (value == null || weight <= 0)
+        if (weight <= 0)
             continue;
         num += value * weight;
         den += weight;
     }
-    return den > 0 ? num / den : null;
+    if (den > 0)
+        return num / den;
+    // No row had the weighting stat (e.g. AVG entered without AB) — fall
+    // back to a plain average of whatever rate values are present rather
+    // than silently dropping them from career totals.
+    return unweighted.length > 0 ? unweighted.reduce((a, b) => a + b, 0) / unweighted.length : null;
 }
 export function computeCareerTotals(statRows) {
     if (!statRows || statRows.length === 0)
@@ -389,4 +436,51 @@ export async function getFeaturedNews() {
     });
     const [top, ...secondary] = articles;
     return { top, secondary };
+}
+export async function getRecentTransactions(limit = 6) {
+    const transactions = await prisma.transaction.findMany({
+        orderBy: { date: "desc" },
+        take: limit,
+        include: { assets: { include: { player: true, fromTeam: true, toTeam: true } } },
+    });
+    return transactions;
+}
+export async function getAllNews() {
+    return prisma.newsArticle.findMany({
+        where: { published: true },
+        orderBy: { publishedAt: "desc" },
+        include: { media: true },
+    });
+}
+export async function getTeamsWithRecords(seasonId) {
+    if (!seasonId)
+        return [];
+    const divisions = await getStandings(seasonId);
+    return divisions.flatMap((d) => d.teams.map((t) => ({ ...t, division: d.name })));
+}
+export async function getTeamDetail(shortCode, seasonId) {
+    const team = await prisma.team.findUnique({ where: { shortCode } });
+    if (!team)
+        return null;
+    const [players, games, record] = await Promise.all([
+        prisma.player.findMany({ where: { teamId: team.id }, orderBy: { name: "asc" } }),
+        seasonId
+            ? prisma.game.findMany({
+                where: {
+                    seasonId,
+                    playoffSeriesId: null,
+                    OR: [{ homeTeamId: team.id }, { awayTeamId: team.id }],
+                },
+                include: { homeTeam: true, awayTeam: true },
+                orderBy: [{ round: "asc" }, { createdAt: "asc" }],
+            })
+            : Promise.resolve([]),
+        seasonId ? getTeamsWithRecords(seasonId) : Promise.resolve([]),
+    ]);
+    return {
+        team,
+        players,
+        games: games.map(toScoreboardGame),
+        record: record.find((t) => t.id === team.id) ?? null,
+    };
 }
