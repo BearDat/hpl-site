@@ -14,7 +14,11 @@ export function StandingsCard({ divisions }) {
           </div>
           {division.teams.map((team, i) => (<div key={team.id} className={`flex items-center gap-1.5 py-1 text-[11px] ${i === 0 ? "font-bold" : ""} ${i < division.teams.length - 1 ? "border-b border-ink/10" : ""}`}>
               <TeamCrest color={team.primaryColor} logoUrl={team.logoUrl} className="h-[13px] w-[11px]"/>
-              <span className="min-w-0 flex-1 truncate">{team.name}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {team.name}
+                {team.clinched && <span className="ml-1 font-extrabold text-accent">z</span>}
+                {team.eliminated && <span className="ml-1 font-extrabold opacity-40">e</span>}
+              </span>
               <span className="flex-shrink-0">
                 {team.wins}&ndash;{team.losses}
               </span>

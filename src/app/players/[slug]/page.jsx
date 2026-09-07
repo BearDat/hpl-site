@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { TeamCrest } from "@/components/TeamCrest";
-import { getPlayerBySlug } from "@/lib/queries";
+import { getPlayerBySlug, computeCareerTotals } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 const BATTING_FIELDS = [
     { key: "gamesPlayed", label: "GP" },
@@ -45,12 +45,60 @@ function StatGrid({ stat, fields, }) {
 function hasAny(stat, fields) {
     return fields.some((f) => stat[f.key] != null);
 }
+function withOps(stat) {
+    return {
+        ...stat,
+        ops: stat.onBasePct != null && stat.slugging != null ? stat.onBasePct + stat.slugging : null,
+    };
+}
+function StatBlock({ label, stat }) {
+    const statWithOps = withOps(stat);
+    const showBatting = hasAny(statWithOps, BATTING_FIELDS);
+    const showPitching = hasAny(stat, PITCHING_FIELDS);
+    if (!showBatting && !showPitching)
+        return null;
+    return (<div className="mb-4 last:mb-0">
+      <div className="mb-2 text-[10px] font-extrabold uppercase tracking-wide text-accent">
+        {label}
+      </div>
+      {showBatting && (<div className="mb-3">
+          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-wide opacity-45">
+            Batting
+          </div>
+          <StatGrid stat={statWithOps} fields={BATTING_FIELDS}/>
+        </div>)}
+      {showPitching && (<div>
+          <div className="mb-2 text-[10px] font-extrabold uppercase tracking-wide opacity-45">
+            Pitching
+          </div>
+          <StatGrid stat={stat} fields={PITCHING_FIELDS}/>
+        </div>)}
+    </div>);
+}
 export default async function PlayerPage(props) {
     const { slug } = await props.params;
     const result = await getPlayerBySlug(slug);
     if (!result)
         notFound();
     const { player, transactions } = result;
+    const regularStats = player.seasonStats.filter((s) => !s.isPlayoffs);
+    const playoffStats = player.seasonStats.filter((s) => s.isPlayoffs);
+    const regularCareer = computeCareerTotals(regularStats);
+    const playoffCareer = computeCareerTotals(playoffStats);
+    const seasonOrder = [];
+    const seasonGroupMap = new Map();
+    for (const stat of player.seasonStats) {
+        if (!seasonGroupMap.has(stat.seasonId)) {
+            seasonGroupMap.set(stat.seasonId, { season: stat.season, regular: null, playoffs: null });
+            seasonOrder.push(stat.seasonId);
+        }
+        const group = seasonGroupMap.get(stat.seasonId);
+        if (stat.isPlayoffs)
+            group.playoffs = stat;
+        else
+            group.regular = stat;
+    }
+    const seasonGroups = seasonOrder.map((id) => seasonGroupMap.get(id));
     return (<div className="flex flex-1 flex-col">
       <Header />
       <main className="flex-1 px-14 py-10">
@@ -84,36 +132,36 @@ export default async function PlayerPage(props) {
             </div>
           </div>)}
 
-        {player.seasonStats.length > 0 && (<div className="mb-8 border-[3px] border-ink p-6">
+        {player.awards.length > 0 && (<div className="mb-8 border-[3px] border-ink p-6">
             <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">
-              SEASON STATS
+              AWARDS
             </div>
-            {player.seasonStats.map((stat) => {
-                const showBatting = hasAny(stat, BATTING_FIELDS);
-                const showPitching = hasAny(stat, PITCHING_FIELDS);
-                const statWithOps = {
-                    ...stat,
-                    ops: stat.onBasePct != null && stat.slugging != null
-                        ? stat.onBasePct + stat.slugging
-                        : null,
-                };
-                return (<div key={stat.id} className="mb-6 last:mb-0">
-                  <div className="mb-3 text-sm font-bold">{stat.season.name}</div>
-                  {showBatting && (<div className="mb-4">
-                      <div className="mb-2 text-[10px] font-extrabold uppercase tracking-wide opacity-45">
-                        Batting
-                      </div>
-                      <StatGrid stat={statWithOps} fields={BATTING_FIELDS}/>
-                    </div>)}
-                  {showPitching && (<div>
-                      <div className="mb-2 text-[10px] font-extrabold uppercase tracking-wide opacity-45">
-                        Pitching
-                      </div>
-                      <StatGrid stat={stat} fields={PITCHING_FIELDS}/>
-                    </div>)}
-                  {!showBatting && !showPitching && (<p className="text-sm opacity-55">No stats recorded yet.</p>)}
-                </div>);
-            })}
+            <div className="flex flex-col gap-2">
+              {player.awards.map((a) => (<div key={a.id} className="flex items-center justify-between border-b border-ink/10 pb-2 text-sm last:border-b-0">
+                  <span className="font-display text-base">{a.title}</span>
+                  <span className="text-xs opacity-55">{a.season ? a.season.name : "Career"}</span>
+                </div>))}
+            </div>
+          </div>)}
+
+        {(regularCareer || playoffCareer) && (<div className="mb-8 border-[3px] border-ink p-6">
+            <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">
+              CAREER STATS
+            </div>
+            {regularCareer && <StatBlock label="Regular Season" stat={regularCareer}/>}
+            {playoffCareer && <StatBlock label="Playoffs" stat={playoffCareer}/>}
+          </div>)}
+
+        {seasonGroups.length > 0 && (<div className="mb-8 border-[3px] border-ink p-6">
+            <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">
+              SEASON BY SEASON
+            </div>
+            {seasonGroups.map((group) => (<div key={group.season.id} className="mb-6 last:mb-0">
+                <div className="mb-3 text-sm font-bold">{group.season.name}</div>
+                {group.regular && <StatBlock label="Regular Season" stat={group.regular}/>}
+                {group.playoffs && <StatBlock label="Playoffs" stat={group.playoffs}/>}
+                {!group.regular && !group.playoffs && (<p className="text-sm opacity-55">No stats recorded yet.</p>)}
+              </div>))}
           </div>)}
 
         {player.prospectRankHistory.length > 0 && (<div className="mb-8 border-[3px] border-ink p-6">

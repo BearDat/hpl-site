@@ -6,6 +6,7 @@ const NAV_LINKS = [
     { href: "/scores", label: "Scores" },
     { href: "/playoffs", label: "Playoffs" },
     { href: "/pipeline", label: "Pipeline" },
+    { href: "/history", label: "History" },
     { href: "/teams", label: "Teams" },
 ];
 export function Header() {

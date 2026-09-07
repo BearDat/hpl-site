@@ -23,6 +23,12 @@ export async function setCurrentSeason(formData) {
     revalidatePath("/admin/league");
     revalidatePath("/");
 }
+export async function setSeasonChampion(seasonId, formData) {
+    const championTeamId = String(formData.get("championTeamId") ?? "") || null;
+    await prisma.season.update({ where: { id: seasonId }, data: { championTeamId } });
+    revalidatePath("/admin/league");
+    revalidatePath("/history");
+}
 export async function updatePlayoffFormat(seasonId, formData) {
     const playoffTeamCount = Number(formData.get("playoffTeamCount") ?? 4);
     const seriesLengthsRaw = String(formData.get("playoffSeriesLengths") ?? "3,5,7");

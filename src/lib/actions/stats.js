@@ -25,6 +25,7 @@ const FLOAT_FIELDS = [
 export async function updatePlayerSeasonStat(formData) {
     const playerId = String(formData.get("playerId") ?? "");
     const seasonId = String(formData.get("seasonId") ?? "");
+    const isPlayoffs = formData.get("isPlayoffs") === "on" || formData.get("isPlayoffs") === "true";
     if (!playerId || !seasonId)
         throw new Error("Player and season are required.");
     const data = {};
@@ -37,9 +38,9 @@ export async function updatePlayerSeasonStat(formData) {
         data[field] = raw != null && raw !== "" ? Number(raw) : null;
     }
     await prisma.playerSeasonStat.upsert({
-        where: { playerId_seasonId: { playerId, seasonId } },
+        where: { playerId_seasonId_isPlayoffs: { playerId, seasonId, isPlayoffs } },
         update: data,
-        create: { playerId, seasonId, ...data },
+        create: { playerId, seasonId, isPlayoffs, ...data },
     });
     revalidatePath("/admin/roster");
     revalidatePath("/");

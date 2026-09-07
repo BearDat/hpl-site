@@ -21,11 +21,15 @@ const PITCHING_FIELDS = [
     { key: "pitcherWalks", label: "BB" },
     { key: "pitcherStrikeouts", label: "K" },
 ];
-export function SeasonStatsForm({ player, seasonId, stat, }) {
+export function SeasonStatsForm({ player, seasonId, stat, isPlayoffs = false, }) {
     return (<form action={updatePlayerSeasonStat} className="mb-6 border-b border-ink/10 pb-6 last:border-b-0 last:pb-0">
       <input type="hidden" name="playerId" value={player.id}/>
       <input type="hidden" name="seasonId" value={seasonId}/>
-      <div className="mb-3 text-sm font-bold">{player.name}</div>
+      <input type="hidden" name="isPlayoffs" value={isPlayoffs ? "on" : "off"}/>
+      <div className="mb-3 text-sm font-bold">
+        {player.name}{" "}
+        <span className="font-normal opacity-50">— {isPlayoffs ? "Playoffs" : "Regular Season"}</span>
+      </div>
 
       <div className="mb-3">
         <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide opacity-50">
