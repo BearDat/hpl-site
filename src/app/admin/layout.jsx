@@ -7,6 +7,7 @@ const SECTIONS = [
     { href: "/admin/teams", label: "Teams" },
     { href: "/admin/league", label: "League" },
     { href: "/admin/playoffs", label: "Playoffs" },
+    { href: "/admin/awards", label: "Awards" },
     { href: "/admin/news", label: "News & Media" },
     { href: "/admin/admins", label: "Admins" },
 ];

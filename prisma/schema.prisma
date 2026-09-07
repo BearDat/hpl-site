@@ -29,6 +29,7 @@ model Team {
   playoffSeriesAsA   PlayoffSeries[]     @relation("PlayoffSeriesTeamA")
   playoffSeriesAsB   PlayoffSeries[]     @relation("PlayoffSeriesTeamB")
   playoffSeriesWon   PlayoffSeries[]     @relation("PlayoffSeriesWinner")
+  championSeasons    Season[]            @relation("SeasonChampion")
 }
 
 model Season {
@@ -38,13 +39,16 @@ model Season {
   playoffTeamCount     Int      @default(4)
   playoffSeriesLengths Int[]    @default([3, 5, 7])
   playoffReseed        Boolean  @default(true)
+  championTeamId       String?
   createdAt            DateTime @default(now())
 
+  championTeam  Team?              @relation("SeasonChampion", fields: [championTeamId], references: [id], onDelete: SetNull)
   divisions     Division[]
   seasonTeams   SeasonTeam[]
   games         Game[]
   playerStats   PlayerSeasonStat[]
   playoffSeries PlayoffSeries[]
+  awards        Award[]
 }
 
 model Division {
@@ -158,12 +162,14 @@ model Player {
   prospectRank       ProspectRank?
   prospectRankHistory ProspectRankHistory[]
   seasonStats        PlayerSeasonStat[]
+  awards             Award[]
 }
 
 model PlayerSeasonStat {
   id           String  @id @default(cuid())
   playerId     String
   seasonId     String
+  isPlayoffs   Boolean @default(false)
 
   // Batting
   gamesPlayed  Int?
@@ -189,7 +195,7 @@ model PlayerSeasonStat {
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
   season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
 
-  @@unique([playerId, seasonId])
+  @@unique([playerId, seasonId, isPlayoffs])
 }
 
 enum TransactionType {
@@ -272,6 +278,17 @@ model ProspectRankHistory {
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([playerId, recordedAt])
+}
+
+model Award {
+  id        String   @id @default(cuid())
+  playerId  String
+  seasonId  String?
+  title     String
+  createdAt DateTime @default(now())
+
+  player Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  season Season? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
 }
 
 // --- Admin ------------------------------------------------------------------

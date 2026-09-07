@@ -28,7 +28,8 @@ export default async function RosterPage() {
     ]);
     const freeAgents = players.filter((p) => !p.teamId);
     const activePlayers = players.filter((p) => p.teamId);
-    const statByPlayerId = new Map(seasonStats.map((s) => [s.playerId, s]));
+    const regularStatByPlayerId = new Map(seasonStats.filter((s) => !s.isPlayoffs).map((s) => [s.playerId, s]));
+    const playoffStatByPlayerId = new Map(seasonStats.filter((s) => s.isPlayoffs).map((s) => [s.playerId, s]));
     return (<div>
       <h1 className="mb-6 font-display text-2xl">Roster Management</h1>
 
@@ -195,7 +196,10 @@ export default async function RosterPage() {
       </Panel>
 
       {season && (<Panel title={`Season Stats — ${season.name}`}>
-          {players.map((p) => (<SeasonStatsForm key={p.id} player={p} seasonId={season.id} stat={statByPlayerId.get(p.id)}/>))}
+          {players.map((p) => (<div key={p.id} className="mb-8 last:mb-0">
+              <SeasonStatsForm player={p} seasonId={season.id} stat={regularStatByPlayerId.get(p.id)} isPlayoffs={false}/>
+              <SeasonStatsForm player={p} seasonId={season.id} stat={playoffStatByPlayerId.get(p.id)} isPlayoffs={true}/>
+            </div>))}
         </Panel>)}
 
       <Panel title="Recent Transactions">

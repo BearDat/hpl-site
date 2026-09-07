@@ -31,7 +31,11 @@ export default async function StandingsPage() {
       <Header />
       <main className="flex-1 px-14 py-10">
         <h1 className="mb-1 font-display text-2xl">STANDINGS</h1>
-        <p className="mb-8 text-sm opacity-60">{season.name}</p>
+        <p className="mb-2 text-sm opacity-60">{season.name}</p>
+        <p className="mb-8 text-xs opacity-50">
+          <span className="font-extrabold text-accent">z</span> &ndash; clinched playoff spot &middot;{" "}
+          <span className="font-extrabold opacity-70">e</span> &ndash; eliminated
+        </p>
 
         {divisions.map((division) => (<div key={division.name} className="mb-10">
             <div className="mb-3 text-xs font-extrabold tracking-wide opacity-55">
@@ -55,6 +59,12 @@ export default async function StandingsPage() {
                         <div className="flex items-center gap-2">
                           <TeamCrest color={team.primaryColor} logoUrl={team.logoUrl} className="h-4 w-3.5 flex-shrink-0"/>
                           <span className="truncate">{team.name}</span>
+                          {team.clinched && (<span className="flex-shrink-0 text-[10px] font-extrabold text-accent" title="Clinched a playoff spot">
+                              z
+                            </span>)}
+                          {team.eliminated && (<span className="flex-shrink-0 text-[10px] font-extrabold opacity-40" title="Eliminated from playoff contention">
+                              e
+                            </span>)}
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right">{team.wins}</td>

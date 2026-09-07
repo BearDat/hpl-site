@@ -32,7 +32,8 @@ function emptyAgg() {
     };
 }
 export async function getStandings(seasonId) {
-    const [divisions, seasonTeams, games] = await Promise.all([
+    const [season, divisions, seasonTeams, games] = await Promise.all([
+        prisma.season.findUniqueOrThrow({ where: { id: seasonId } }),
         prisma.division.findMany({ where: { seasonId }, orderBy: { order: "asc" } }),
         prisma.seasonTeam.findMany({
             where: { seasonId },
@@ -45,6 +46,17 @@ export async function getStandings(seasonId) {
             orderBy: { createdAt: "asc" },
         }),
     ]);
+    const remaining = new Map();
+    for (const st of seasonTeams)
+        remaining.set(st.teamId, 0);
+    for (const game of games) {
+        if (game.status !== "SCHEDULED" && game.status !== "LIVE")
+            continue;
+        if (remaining.has(game.homeTeamId))
+            remaining.set(game.homeTeamId, remaining.get(game.homeTeamId) + 1);
+        if (remaining.has(game.awayTeamId))
+            remaining.set(game.awayTeamId, remaining.get(game.awayTeamId) + 1);
+    }
     const agg = new Map();
     for (const st of seasonTeams)
         agg.set(st.teamId, emptyAgg());
@@ -101,6 +113,23 @@ export async function getStandings(seasonId) {
         const wins = recent.filter((r) => r === "W").length;
         return `${wins}-${recent.length - wins}`;
     }
+    // Playoff qualification is a single league-wide pool of the top
+    // `playoffTeamCount` teams by wins, not per division (see
+    // generateFirstRound in actions/playoffs.js) — so clinch/elimination
+    // status is computed across every team in the season, not per division.
+    const pool = seasonTeams.map((st) => {
+        const rec = agg.get(st.teamId) ?? emptyAgg();
+        const maxWins = rec.wins + (remaining.get(st.teamId) ?? 0);
+        return { teamId: st.teamId, wins: rec.wins, maxWins };
+    });
+    const clinchStatus = new Map();
+    for (const t of pool) {
+        const couldPassCount = pool.filter((o) => o.teamId !== t.teamId && o.maxWins > t.wins).length;
+        const alreadyAheadCount = pool.filter((o) => o.teamId !== t.teamId && o.wins >= t.maxWins).length;
+        const clinched = couldPassCount < season.playoffTeamCount;
+        const eliminated = alreadyAheadCount >= season.playoffTeamCount;
+        clinchStatus.set(t.teamId, { clinched: clinched && !eliminated, eliminated });
+    }
     return divisions.map((division) => {
         const teams = seasonTeams
             .filter((st) => st.divisionId === division.id)
@@ -131,6 +160,8 @@ export async function getStandings(seasonId) {
                 awayRecord: `${t.awayWins}-${t.awayLosses}`,
                 last10: last10For(t.recentResults),
                 streak: streakFor(t.recentResults),
+                clinched: clinchStatus.get(t.team.id)?.clinched ?? false,
+                eliminated: clinchStatus.get(t.team.id)?.eliminated ?? false,
             })),
         };
     });
@@ -286,14 +317,59 @@ export async function getPlayoffBracket(seasonId) {
         })),
     }));
 }
+function sumField(rows, key) {
+    const withValue = rows.filter((r) => r[key] != null);
+    if (withValue.length === 0)
+        return null;
+    return withValue.reduce((total, r) => total + r[key], 0);
+}
+function weightedAvg(rows, valueKey, weightKey) {
+    let num = 0;
+    let den = 0;
+    for (const r of rows) {
+        const value = r[valueKey];
+        const weight = r[weightKey] ?? 0;
+        if (value == null || weight <= 0)
+            continue;
+        num += value * weight;
+        den += weight;
+    }
+    return den > 0 ? num / den : null;
+}
+export function computeCareerTotals(statRows) {
+    if (!statRows || statRows.length === 0)
+        return null;
+    const countingFields = [
+        "gamesPlayed", "atBats", "hits", "walks", "strikeouts", "homeRuns", "rbi", "stolenBases",
+        "gamesPitched", "pitcherWalks", "pitcherStrikeouts", "inningsPitched",
+    ];
+    const totals = { seasons: statRows.length };
+    for (const key of countingFields) {
+        totals[key] = sumField(statRows, key);
+    }
+    totals.battingAvg = weightedAvg(statRows, "battingAvg", "atBats");
+    totals.onBasePct = weightedAvg(statRows, "onBasePct", "atBats");
+    totals.slugging = weightedAvg(statRows, "slugging", "atBats");
+    totals.era = weightedAvg(statRows, "era", "inningsPitched");
+    totals.whip = weightedAvg(statRows, "whip", "inningsPitched");
+    return totals;
+}
+export async function getPastSeasons() {
+    return prisma.season.findMany({
+        where: { isCurrent: false },
+        orderBy: { createdAt: "desc" },
+        include: { championTeam: true },
+    });
+}
 export async function getPlayerBySlug(slug) {
     const player = await prisma.player.findUnique({
         where: { slug },
         include: {
             team: true,
             prospectRank: true,
-            seasonStats: { include: { season: true }, orderBy: { season: { createdAt: "desc" } } },
+            seasonStats: { include: { season: true }, orderBy: [{ season: { createdAt: "desc" } }, { isPlayoffs: "asc" }] },
             prospectRankHistory: { orderBy: { recordedAt: "desc" } },
+            awards: { include: { season: true }, orderBy: { createdAt: "desc" } },
         },
     });
     if (!player)

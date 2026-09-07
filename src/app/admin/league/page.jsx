@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { createSeason, setCurrentSeason, updatePlayoffFormat, createDivision, deleteDivision, addTeamToSeason, removeTeamFromSeason, } from "@/lib/actions/league";
+import { createSeason, setCurrentSeason, setSeasonChampion, updatePlayoffFormat, createDivision, deleteDivision, addTeamToSeason, removeTeamFromSeason, } from "@/lib/actions/league";
 import { Panel, Field, inputClass, buttonClass, buttonSecondaryClass } from "@/components/admin/ui";
 export const dynamic = "force-dynamic";
 export default async function LeaguePage() {
     const [seasons, teams] = await Promise.all([
-        prisma.season.findMany({ orderBy: { createdAt: "desc" } }),
+        prisma.season.findMany({ orderBy: { createdAt: "desc" }, include: { championTeam: true } }),
         prisma.team.findMany({ orderBy: { name: "asc" } }),
     ]);
     const current = seasons.find((s) => s.isCurrent) ?? null;
@@ -26,16 +26,29 @@ export default async function LeaguePage() {
 
       <Panel title="Seasons">
         <div className="mb-4 flex flex-col gap-2">
-          {seasons.map((s) => (<div key={s.id} className="flex items-center justify-between border-b border-ink/10 py-2 text-sm">
+          {seasons.map((s) => (<div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-ink/10 py-2 text-sm">
               <span className={s.isCurrent ? "font-bold" : ""}>
                 {s.name} {s.isCurrent && <span className="text-accent">(current)</span>}
               </span>
-              {!s.isCurrent && (<form action={setCurrentSeason}>
-                  <input type="hidden" name="seasonId" value={s.id}/>
+              <div className="flex items-center gap-2">
+                <form action={setSeasonChampion.bind(null, s.id)} className="flex items-center gap-2">
+                  <select name="championTeamId" defaultValue={s.championTeamId ?? ""} className={`${inputClass} !w-44 !py-1 !text-xs`}>
+                    <option value="">No champion set</option>
+                    {teams.map((t) => (<option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>))}
+                  </select>
                   <button type="submit" className={`${buttonSecondaryClass} !text-[10px]`}>
-                    Set Current
+                    Set Champion
                   </button>
-                </form>)}
+                </form>
+                {!s.isCurrent && (<form action={setCurrentSeason}>
+                    <input type="hidden" name="seasonId" value={s.id}/>
+                    <button type="submit" className={`${buttonSecondaryClass} !text-[10px]`}>
+                      Set Current
+                    </button>
+                  </form>)}
+              </div>
             </div>))}
         </div>
         <form action={createSeason} className="flex items-end gap-3">
