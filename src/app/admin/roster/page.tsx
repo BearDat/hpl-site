@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createPlayer, signPlayer, releasePlayer, tradePlayers } from "@/lib/actions/roster";
 import { Panel, Field, inputClass, buttonClass } from "@/components/admin/ui";
@@ -171,7 +172,10 @@ export default async function RosterPage() {
               className="flex items-center justify-between border-b border-ink/10 py-1.5 text-sm"
             >
               <span>
-                {p.name} <span className="opacity-55">· {p.position}</span>
+                <Link href={`/players/${p.slug}`} className="hover:text-accent" target="_blank">
+                  {p.name}
+                </Link>{" "}
+                <span className="opacity-55">· {p.position}</span>
               </span>
               <span className="text-xs font-bold opacity-60">
                 {p.team?.name ?? "Free Agent"}

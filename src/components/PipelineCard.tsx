@@ -1,5 +1,8 @@
+import Link from "next/link";
+
 type PipelineEntry = {
   rank: number;
+  slug: string;
   initials: string;
   name: string;
   team: string;
@@ -60,7 +63,9 @@ export function PipelineCard({ entries }: { entries: PipelineEntry[] }) {
             {entry.initials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-bold">{entry.name}</div>
+            <Link href={`/players/${entry.slug}`} className="truncate block text-sm font-bold hover:text-accent">
+              {entry.name}
+            </Link>
             <div className="truncate text-xs opacity-60">{entry.team}</div>
           </div>
           <Movement movement={entry.movement} />

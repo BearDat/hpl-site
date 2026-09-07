@@ -146,6 +146,7 @@ export async function getPipelineTop(n = 5) {
   });
   return ranks.map((r) => ({
     rank: r.rank,
+    slug: r.player.slug,
     name: r.player.name,
     team: r.player.team?.name ?? "Free Agent",
     color: r.player.team?.primaryColor ?? "#8b93ac",
@@ -201,10 +202,104 @@ export async function getStatLeaders(seasonId: string) {
         label: cat.label,
         value: cat.format(leader[cat.key] as number),
         player: leader.player.name,
+        playerSlug: leader.player.slug,
         team: leader.player.team?.shortCode ?? "FA",
       };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
+}
+
+export type BracketTeam = {
+  id: string;
+  name: string;
+  shortCode: string;
+  primaryColor: string;
+  logoUrl: string | null;
+  seed: number | null;
+} | null;
+
+export type BracketSeries = {
+  id: string;
+  order: number;
+  bestOf: number;
+  teamA: BracketTeam;
+  teamB: BracketTeam;
+  teamAWins: number;
+  teamBWins: number;
+  winnerId: string | null;
+};
+
+export type BracketRound = {
+  round: number;
+  name: string;
+  series: BracketSeries[];
+};
+
+export async function getPlayoffBracket(seasonId: string): Promise<BracketRound[]> {
+  const series = await prisma.playoffSeries.findMany({
+    where: { seasonId },
+    orderBy: [{ round: "asc" }, { order: "asc" }],
+    include: { teamA: true, teamB: true },
+  });
+
+  const rounds = new Map<number, typeof series>();
+  for (const s of series) {
+    if (!rounds.has(s.round)) rounds.set(s.round, []);
+    rounds.get(s.round)!.push(s);
+  }
+
+  return Array.from(rounds.entries()).map(([round, roundSeries]) => ({
+    round,
+    name: roundSeries[0]?.roundName ?? `Round ${round}`,
+    series: roundSeries.map((s) => ({
+      id: s.id,
+      order: s.order,
+      bestOf: s.bestOf,
+      teamAWins: s.teamAWins,
+      teamBWins: s.teamBWins,
+      winnerId: s.winnerId,
+      teamA: s.teamA
+        ? {
+            id: s.teamA.id,
+            name: s.teamA.name,
+            shortCode: s.teamA.shortCode,
+            primaryColor: s.teamA.primaryColor,
+            logoUrl: s.teamA.logoUrl,
+            seed: s.teamASeed,
+          }
+        : null,
+      teamB: s.teamB
+        ? {
+            id: s.teamB.id,
+            name: s.teamB.name,
+            shortCode: s.teamB.shortCode,
+            primaryColor: s.teamB.primaryColor,
+            logoUrl: s.teamB.logoUrl,
+            seed: s.teamBSeed,
+          }
+        : null,
+    })),
+  }));
+}
+
+export async function getPlayerBySlug(slug: string) {
+  const player = await prisma.player.findUnique({
+    where: { slug },
+    include: {
+      team: true,
+      prospectRank: true,
+      seasonStats: { include: { season: true }, orderBy: { season: { createdAt: "desc" } } },
+    },
+  });
+  if (!player) return null;
+
+  const transactions = await prisma.transactionAsset.findMany({
+    where: { playerId: player.id },
+    include: { transaction: true, fromTeam: true, toTeam: true },
+    orderBy: { transaction: { date: "desc" } },
+  });
+
+  return { player, transactions };
 }
 
 export async function getFeaturedNews() {

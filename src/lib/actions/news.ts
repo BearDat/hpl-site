@@ -3,24 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { saveUploadedFile } from "@/lib/upload";
+import { uniqueSlug } from "@/lib/slugify";
 
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-async function uniqueSlug(title: string): Promise<string> {
-  const base = slugify(title) || "article";
-  let slug = base;
-  let n = 1;
-  while (await prisma.newsArticle.findUnique({ where: { slug } })) {
-    n += 1;
-    slug = `${base}-${n}`;
-  }
-  return slug;
+async function uniqueArticleSlug(title: string): Promise<string> {
+  return uniqueSlug(
+    title,
+    async (slug) => (await prisma.newsArticle.findUnique({ where: { slug } })) !== null,
+    "article"
+  );
 }
 
 async function heroImageUrlFromForm(formData: FormData): Promise<string | undefined> {
@@ -37,7 +27,7 @@ export async function createArticle(formData: FormData) {
   const published = formData.get("published") === "on";
   if (!title || !body) throw new Error("Title and body are required.");
 
-  const slug = await uniqueSlug(title);
+  const slug = await uniqueArticleSlug(title);
   const heroImageUrl = await heroImageUrlFromForm(formData);
 
   await prisma.newsArticle.create({

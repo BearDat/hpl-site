@@ -2,6 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { uniqueSlug } from "@/lib/slugify";
+
+async function uniquePlayerSlug(name: string): Promise<string> {
+  return uniqueSlug(
+    name,
+    async (slug) => (await prisma.player.findUnique({ where: { slug } })) !== null,
+    "player"
+  );
+}
 
 export async function createPlayer(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
@@ -10,8 +19,10 @@ export async function createPlayer(formData: FormData) {
 
   if (!name || !position) throw new Error("Name and position are required.");
 
+  const slug = await uniquePlayerSlug(name);
+
   await prisma.player.create({
-    data: { name, position, teamId, status: teamId ? "ACTIVE" : "FREE_AGENT" },
+    data: { name, slug, position, teamId, status: teamId ? "ACTIVE" : "FREE_AGENT" },
   });
 
   revalidatePath("/admin/roster");
