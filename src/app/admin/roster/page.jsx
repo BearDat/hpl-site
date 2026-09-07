@@ -1,16 +1,11 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { createPlayer, signPlayer, releasePlayer, tradePlayers } from "@/lib/actions/roster";
+import { getCurrentSeason } from "@/lib/queries";
+import { createPlayer, signPlayer, releasePlayer, tradePlayers, mergePlayers } from "@/lib/actions/roster";
 import { Panel, Field, inputClass, buttonClass } from "@/components/admin/ui";
-<<<<<<< HEAD:src/app/admin/roster/page.jsx
 import { PlayerRow } from "@/components/admin/PlayerRow";
 import { SeasonStatsForm } from "@/components/admin/SeasonStatsForm";
-=======
-
->>>>>>> parent of 8691e5f (Expand stats, standings, and prospect history; link players to Roblox IDs):src/app/admin/roster/page.tsx
 export const dynamic = "force-dynamic";
 export default async function RosterPage() {
-<<<<<<< HEAD:src/app/admin/roster/page.jsx
     const season = await getCurrentSeason();
     const [teams, players, transactions, seasonStats] = await Promise.all([
         prisma.team.findMany({ orderBy: { name: "asc" } }),
@@ -35,34 +30,10 @@ export default async function RosterPage() {
     const activePlayers = players.filter((p) => p.teamId);
     const statByPlayerId = new Map(seasonStats.map((s) => [s.playerId, s]));
     return (<div>
-=======
-  const [teams, players, transactions] = await Promise.all([
-    prisma.team.findMany({ orderBy: { name: "asc" } }),
-    prisma.player.findMany({
-      include: { team: true },
-      orderBy: [{ team: { name: "asc" } }, { name: "asc" }],
-    }),
-    prisma.transaction.findMany({
-      orderBy: { date: "desc" },
-      take: 15,
-      include: {
-        assets: {
-          include: { player: true, fromTeam: true, toTeam: true },
-        },
-      },
-    }),
-  ]);
-
-  const freeAgents = players.filter((p) => !p.teamId);
-  const activePlayers = players.filter((p) => p.teamId);
-
-  return (
-    <div>
->>>>>>> parent of 8691e5f (Expand stats, standings, and prospect history; link players to Roblox IDs):src/app/admin/roster/page.tsx
       <h1 className="mb-6 font-display text-2xl">Roster Management</h1>
 
       <Panel title="Add Player">
-        <form action={createPlayer} className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <form action={createPlayer} className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <Field label="Name">
             <input name="name" required className={inputClass}/>
           </Field>
@@ -77,12 +48,9 @@ export default async function RosterPage() {
                 </option>))}
             </select>
           </Field>
-<<<<<<< HEAD:src/app/admin/roster/page.jsx
           <Field label="Roblox ID">
             <input name="robloxId" placeholder="Optional" className={inputClass}/>
           </Field>
-=======
->>>>>>> parent of 8691e5f (Expand stats, standings, and prospect history; link players to Roblox IDs):src/app/admin/roster/page.tsx
           <div className="flex items-end">
             <button type="submit" className={buttonClass}>
               Add Player
@@ -186,7 +154,6 @@ export default async function RosterPage() {
       </Panel>
 
       <Panel title="Players">
-<<<<<<< HEAD:src/app/admin/roster/page.jsx
         <div className="mb-2 hidden text-[10px] font-bold uppercase tracking-wide opacity-50 sm:grid sm:grid-cols-12 sm:gap-2">
           <div className="col-span-2">Link</div>
           <div className="col-span-2">Name</div>
@@ -230,27 +197,6 @@ export default async function RosterPage() {
       {season && (<Panel title={`Season Stats — ${season.name}`}>
           {players.map((p) => (<SeasonStatsForm key={p.id} player={p} seasonId={season.id} stat={statByPlayerId.get(p.id)}/>))}
         </Panel>)}
-=======
-        <div className="grid grid-cols-1 gap-x-8 gap-y-1 sm:grid-cols-2">
-          {players.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between border-b border-ink/10 py-1.5 text-sm"
-            >
-              <span>
-                <Link href={`/players/${p.slug}`} className="hover:text-accent" target="_blank">
-                  {p.name}
-                </Link>{" "}
-                <span className="opacity-55">· {p.position}</span>
-              </span>
-              <span className="text-xs font-bold opacity-60">
-                {p.team?.name ?? "Free Agent"}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Panel>
->>>>>>> parent of 8691e5f (Expand stats, standings, and prospect history; link players to Roblox IDs):src/app/admin/roster/page.tsx
 
       <Panel title="Recent Transactions">
         {transactions.length === 0 ? (<p className="text-sm opacity-60">No transactions yet.</p>) : (<div className="flex flex-col gap-3">

@@ -147,14 +147,16 @@ model Player {
   id        String       @id @default(cuid())
   name      String
   slug      String       @unique
+  robloxId  String?      @unique
   position  String
   teamId    String?
   status    PlayerStatus @default(FREE_AGENT)
   createdAt DateTime     @default(now())
 
-  team               Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team               Team?                 @relation(fields: [teamId], references: [id], onDelete: SetNull)
   transactionAssets  TransactionAsset[]
   prospectRank       ProspectRank?
+  prospectRankHistory ProspectRankHistory[]
   seasonStats        PlayerSeasonStat[]
 }
 
@@ -162,11 +164,27 @@ model PlayerSeasonStat {
   id           String  @id @default(cuid())
   playerId     String
   seasonId     String
-  battingAvg   Float?
+
+  // Batting
+  gamesPlayed  Int?
+  atBats       Int?
+  hits         Int?
+  walks        Int?
+  strikeouts   Int?
   homeRuns     Int?
   rbi          Int?
   stolenBases  Int?
-  era          Float?
+  battingAvg   Float?
+  onBasePct    Float?
+  slugging     Float?
+
+  // Pitching
+  gamesPitched      Int?
+  inningsPitched    Float?
+  era               Float?
+  whip              Float?
+  pitcherWalks      Int?
+  pitcherStrikeouts Int?
 
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
   season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
@@ -243,6 +261,17 @@ model ProspectRank {
   updatedAt    DateTime @updatedAt
 
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model ProspectRankHistory {
+  id         String   @id @default(cuid())
+  playerId   String
+  rank       Int
+  recordedAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, recordedAt])
 }
 
 // --- Admin ------------------------------------------------------------------
