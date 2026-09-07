@@ -1,4 +1,5 @@
 import { PrismaClient, GameStatus, TransactionType } from "@prisma/client";
+import { slugify } from "../src/lib/slugify";
 
 const prisma = new PrismaClient();
 
@@ -104,11 +105,15 @@ async function main() {
     const existing = await prisma.player.findFirst({
       where: { name: p.name, teamId },
     });
+    const slug = slugify(p.name);
     const player =
       existing ??
       (await prisma.player.create({
-        data: { name: p.name, position: p.position, teamId, status: "ACTIVE" },
+        data: { name: p.name, slug, position: p.position, teamId, status: "ACTIVE" },
       }));
+    if (existing && !existing.slug) {
+      await prisma.player.update({ where: { id: existing.id }, data: { slug } });
+    }
     playerByName.set(p.name, player.id);
   }
 

@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 type StatLeader = {
   value: string;
   label: string;
   player: string;
+  playerSlug: string;
   team: string;
 };
 
@@ -24,7 +27,10 @@ export function StatLeadersCard({ leaders }: { leaders: StatLeader[] }) {
           <div className="min-w-0 flex-1">
             <div className="text-[11.5px] font-bold">{stat.label}</div>
             <div className="truncate text-[9.5px] opacity-55">
-              {stat.player} &middot; {stat.team}
+              <Link href={`/players/${stat.playerSlug}`} className="hover:text-accent">
+                {stat.player}
+              </Link>{" "}
+              &middot; {stat.team}
             </div>
           </div>
         </div>

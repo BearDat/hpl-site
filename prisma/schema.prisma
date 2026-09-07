@@ -26,6 +26,9 @@ model Team {
   forfeitWins        Game[]              @relation("ForfeitWinner")
   transactionsFrom   TransactionAsset[]  @relation("FromTeam")
   transactionsTo     TransactionAsset[]  @relation("ToTeam")
+  playoffSeriesAsA   PlayoffSeries[]     @relation("PlayoffSeriesTeamA")
+  playoffSeriesAsB   PlayoffSeries[]     @relation("PlayoffSeriesTeamB")
+  playoffSeriesWon   PlayoffSeries[]     @relation("PlayoffSeriesWinner")
 }
 
 model Season {
@@ -37,10 +40,11 @@ model Season {
   playoffReseed        Boolean  @default(true)
   createdAt            DateTime @default(now())
 
-  divisions   Division[]
-  seasonTeams SeasonTeam[]
-  games       Game[]
-  playerStats PlayerSeasonStat[]
+  divisions     Division[]
+  seasonTeams   SeasonTeam[]
+  games         Game[]
+  playerStats   PlayerSeasonStat[]
+  playoffSeries PlayoffSeries[]
 }
 
 model Division {
@@ -91,15 +95,44 @@ model Game {
   innings          Int?
   forfeitWinnerId  String?
   notes            String?
+  playoffSeriesId  String?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  season         Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  homeTeam       Team   @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  awayTeam       Team   @relation("AwayTeam", fields: [awayTeamId], references: [id])
-  forfeitWinner  Team?  @relation("ForfeitWinner", fields: [forfeitWinnerId], references: [id])
+  season         Season        @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  homeTeam       Team          @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam       Team          @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  forfeitWinner  Team?         @relation("ForfeitWinner", fields: [forfeitWinnerId], references: [id])
+  playoffSeries  PlayoffSeries? @relation(fields: [playoffSeriesId], references: [id], onDelete: SetNull)
 
   @@index([seasonId, round])
+}
+
+// --- Playoffs ---------------------------------------------------------------
+
+model PlayoffSeries {
+  id         String   @id @default(cuid())
+  seasonId   String
+  round      Int
+  roundName  String?
+  order      Int
+  bestOf     Int      @default(5)
+  teamAId    String?
+  teamBId    String?
+  teamASeed  Int?
+  teamBSeed  Int?
+  teamAWins  Int      @default(0)
+  teamBWins  Int      @default(0)
+  winnerId   String?
+  createdAt  DateTime @default(now())
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  teamA  Team?  @relation("PlayoffSeriesTeamA", fields: [teamAId], references: [id])
+  teamB  Team?  @relation("PlayoffSeriesTeamB", fields: [teamBId], references: [id])
+  winner Team?  @relation("PlayoffSeriesWinner", fields: [winnerId], references: [id])
+  games  Game[]
+
+  @@unique([seasonId, round, order])
 }
 
 // --- Roster ---------------------------------------------------------------
@@ -113,6 +146,7 @@ enum PlayerStatus {
 model Player {
   id        String       @id @default(cuid())
   name      String
+  slug      String       @unique
   position  String
   teamId    String?
   status    PlayerStatus @default(FREE_AGENT)
