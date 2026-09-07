@@ -1,6 +1,6 @@
 import { TeamCrest } from "./TeamCrest";
 function TeamLine({ team, wins, isWinner, }) {
-    return (<div className={`flex items-center justify-between gap-2 px-3 py-2 ${isWinner ? "bg-ink text-paper" : ""}`}>
+    return (<div className={`flex items-center justify-between gap-2 px-3 py-2 ${isWinner ? "bg-brand text-on-brand" : ""}`}>
       <div className="flex min-w-0 items-center gap-2">
         {team ? (<>
             <TeamCrest color={team.primaryColor} logoUrl={team.logoUrl} className="h-4 w-3.5 flex-shrink-0"/>
@@ -14,7 +14,7 @@ function TeamLine({ team, wins, isWinner, }) {
     </div>);
 }
 export function BracketSeriesCard({ series }) {
-    return (<div className="border-[3px] border-ink bg-white">
+    return (<div className="border-[3px] border-ink bg-surface">
       <TeamLine team={series.teamA} wins={series.teamAWins} isWinner={series.winnerId === series.teamA?.id}/>
       <div className="border-t border-ink/15"/>
       <TeamLine team={series.teamB} wins={series.teamBWins} isWinner={series.winnerId === series.teamB?.id}/>

@@ -107,14 +107,9 @@ export default async function PlayerPage(props) {
           <div>
             <div className="font-display text-3xl">{player.name}</div>
             <div className="mt-1 text-sm font-bold uppercase tracking-wide opacity-60">
-              {player.position}
-              {player.team ? (<>
-                  {" "}
-                  &middot;{" "}
-                  <Link href="/" className="hover:text-accent">
-                    {player.team.name}
-                  </Link>
-                </>) : (<> &middot; Free Agent</>)}
+              {player.team ? (<Link href={`/teams/${player.team.shortCode}`} className="hover:text-accent">
+                  {player.team.name}
+                </Link>) : ("Free Agent")}
               {player.status === "RETIRED" && <> &middot; Retired</>}
             </div>
             {player.robloxId && (<div className="mt-1 text-xs font-semibold opacity-45">
@@ -123,24 +118,28 @@ export default async function PlayerPage(props) {
           </div>
         </div>
 
-        {player.prospectRank && (<div className="mb-8 border-[3px] border-ink bg-ink p-6 text-paper">
-            <div className="text-xs font-extrabold tracking-wide text-accent">
-              PROSPECTS PIPELINE
-            </div>
-            <div className="mt-1 font-display text-2xl">
-              #{player.prospectRank.rank} OVERALL
-            </div>
-          </div>)}
-
-        {player.awards.length > 0 && (<div className="mb-8 border-[3px] border-ink p-6">
-            <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">
-              AWARDS
-            </div>
-            <div className="flex flex-col gap-2">
-              {player.awards.map((a) => (<div key={a.id} className="flex items-center justify-between border-b border-ink/10 pb-2 text-sm last:border-b-0">
-                  <span className="font-display text-base">{a.title}</span>
-                  <span className="text-xs opacity-55">{a.season ? a.season.name : "Career"}</span>
-                </div>))}
+        {(player.prospectRank || player.awards.length > 0) && (<div className="mb-8 border-[3px] border-ink bg-brand p-6 text-on-brand">
+            <div className="flex flex-wrap items-start justify-between gap-6">
+              {player.prospectRank && (<div>
+                  <div className="text-xs font-extrabold tracking-wide text-accent">
+                    PROSPECTS PIPELINE
+                  </div>
+                  <div className="mt-1 font-display text-2xl">
+                    #{player.prospectRank.rank} OVERALL
+                  </div>
+                  {player.prospectRankHistory.length > 1 && (<div className="mt-1 text-xs opacity-60">
+                      Previously: {player.prospectRankHistory.slice(1, 4).map((h) => `#${h.rank}`).join(" · ")}
+                    </div>)}
+                </div>)}
+              {player.awards.length > 0 && (<div className="min-w-0">
+                  <div className="text-xs font-extrabold tracking-wide text-accent">AWARDS</div>
+                  <div className="mt-1 flex flex-col gap-1">
+                    {player.awards.map((a) => (<div key={a.id} className="text-sm">
+                        <span className="font-bold">{a.title}</span>{" "}
+                        <span className="opacity-60">— {a.season ? a.season.name : "Career"}</span>
+                      </div>))}
+                  </div>
+                </div>)}
             </div>
           </div>)}
 
@@ -152,29 +151,20 @@ export default async function PlayerPage(props) {
             {playoffCareer && <StatBlock label="Playoffs" stat={playoffCareer}/>}
           </div>)}
 
-        {seasonGroups.length > 0 && (<div className="mb-8 border-[3px] border-ink p-6">
-            <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">
-              SEASON BY SEASON
-            </div>
-            {seasonGroups.map((group) => (<div key={group.season.id} className="mb-6 last:mb-0">
-                <div className="mb-3 text-sm font-bold">{group.season.name}</div>
-                {group.regular && <StatBlock label="Regular Season" stat={group.regular}/>}
-                {group.playoffs && <StatBlock label="Playoffs" stat={group.playoffs}/>}
-                {!group.regular && !group.playoffs && (<p className="text-sm opacity-55">No stats recorded yet.</p>)}
-              </div>))}
-          </div>)}
-
-        {player.prospectRankHistory.length > 0 && (<div className="mb-8 border-[3px] border-ink p-6">
-            <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">
-              PAST PROSPECT RANKINGS
-            </div>
-            <div className="flex flex-col gap-2">
-              {player.prospectRankHistory.map((h) => (<div key={h.id} className="flex items-center justify-between border-b border-ink/10 pb-2 text-sm last:border-b-0">
-                  <span className="font-display text-base">#{h.rank} Overall</span>
-                  <span className="text-xs opacity-55">{h.recordedAt.toLocaleDateString()}</span>
+        {seasonGroups.length > 0 && (<details className="group mb-8 border-[3px] border-ink p-6">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-extrabold tracking-wide opacity-55">
+              SEASON BY SEASON ({seasonGroups.length})
+              <span className="text-sm transition-transform group-open:rotate-180">▾</span>
+            </summary>
+            <div className="mt-4">
+              {seasonGroups.map((group) => (<div key={group.season.id} className="mb-6 last:mb-0">
+                  <div className="mb-3 text-sm font-bold">{group.season.name}</div>
+                  {group.regular && <StatBlock label="Regular Season" stat={group.regular}/>}
+                  {group.playoffs && <StatBlock label="Playoffs" stat={group.playoffs}/>}
+                  {!group.regular && !group.playoffs && (<p className="text-sm opacity-55">No stats recorded yet.</p>)}
                 </div>))}
             </div>
-          </div>)}
+          </details>)}
 
         <div className="border-[3px] border-ink p-6">
           <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">

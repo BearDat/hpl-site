@@ -38,17 +38,16 @@ export function PlayoffSeriesCard({ series }) {
                   {game.scheduledTime ?? "—"} {game.locationCode ? `· ${game.locationCode}` : ""}
                 </div>
               </div>
-              <select name="status" defaultValue={game.status} className="col-span-2 border border-ink/30 bg-white px-2 py-1.5 text-xs">
+              <select name="status" defaultValue={game.status} className="col-span-2 border border-ink/30 bg-surface px-2 py-1.5 text-xs">
                 <option value="SCHEDULED">Scheduled</option>
-                <option value="LIVE">Live</option>
                 <option value="FINAL">Final</option>
                 <option value="FORFEIT">Forfeit</option>
                 <option value="POSTPONED">Postponed</option>
               </select>
-              <input type="number" name="awayScore" defaultValue={game.awayScore ?? ""} placeholder="Away" className="col-span-1 border border-ink/30 bg-white px-2 py-1.5 text-xs"/>
-              <input type="number" name="homeScore" defaultValue={game.homeScore ?? ""} placeholder="Home" className="col-span-1 border border-ink/30 bg-white px-2 py-1.5 text-xs"/>
-              <input type="number" name="innings" defaultValue={game.innings ?? ""} placeholder="Innings" className="col-span-2 border border-ink/30 bg-white px-2 py-1.5 text-xs"/>
-              <select name="forfeitWinnerId" defaultValue={game.forfeitWinnerId ?? ""} className="col-span-2 border border-ink/30 bg-white px-2 py-1.5 text-xs">
+              <input type="number" name="awayScore" defaultValue={game.awayScore ?? ""} placeholder="Away" className="col-span-1 border border-ink/30 bg-surface px-2 py-1.5 text-xs"/>
+              <input type="number" name="homeScore" defaultValue={game.homeScore ?? ""} placeholder="Home" className="col-span-1 border border-ink/30 bg-surface px-2 py-1.5 text-xs"/>
+              <input type="number" name="innings" defaultValue={game.innings ?? ""} placeholder="Innings" className="col-span-2 border border-ink/30 bg-surface px-2 py-1.5 text-xs"/>
+              <select name="forfeitWinnerId" defaultValue={game.forfeitWinnerId ?? ""} className="col-span-2 border border-ink/30 bg-surface px-2 py-1.5 text-xs">
                 <option value="">Forfeit winner…</option>
                 <option value={game.homeTeam.id}>{game.homeTeam.shortCode} (home)</option>
                 <option value={game.awayTeam.id}>{game.awayTeam.shortCode} (away)</option>

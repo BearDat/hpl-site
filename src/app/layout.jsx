@@ -14,8 +14,19 @@ export const metadata = {
     title: "HCBB Pathway",
     description: "The Pathway Program — East & West Divisions",
 };
+const THEME_INIT_SCRIPT = `
+try {
+  var stored = localStorage.getItem("theme");
+  if (stored === "dark" || stored === "light") {
+    document.documentElement.setAttribute("data-theme", stored);
+  }
+} catch (e) {}
+`;
 export default function RootLayout({ children }) {
     return (<html lang="en" className={`${archivo.variable} ${archivoBlack.variable} h-full`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}/>
+      </head>
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>);
 }

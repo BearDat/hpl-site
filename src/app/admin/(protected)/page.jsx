@@ -23,7 +23,7 @@ export default async function AdminDashboard() {
         Current season: {season ? season.name : "none set — go to League Management"}
       </p>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        {stats.map((s) => (<Link key={s.label} href={s.href} className="border-[3px] border-ink bg-white p-5 hover:bg-ink/5">
+        {stats.map((s) => (<Link key={s.label} href={s.href} className="border-[3px] border-ink bg-surface p-5 hover:bg-ink/5">
             <div className="font-display text-3xl">{s.value}</div>
             <div className="mt-1 text-xs font-bold uppercase tracking-wide opacity-60">
               {s.label}

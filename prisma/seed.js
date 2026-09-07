@@ -1,5 +1,6 @@
 import { PrismaClient, TransactionType } from "@prisma/client";
 import { slugify } from "../src/lib/slugify.js";
+import { hashPassword } from "../src/lib/auth.js";
 const prisma = new PrismaClient();
 const TEAMS = [
     { name: "Redhawks", shortCode: "RHK", primaryColor: "#c1391f", division: "East" },
@@ -12,16 +13,16 @@ const TEAMS = [
     { name: "Stone Foxes", shortCode: "SF", primaryColor: "#c97a2b", division: "West" },
 ];
 const PLAYERS = [
-    { name: "J. Ortiz", position: "OF", team: "RHK" },
-    { name: "M. Sato", position: "3B", team: "SUN" },
-    { name: "D. Brooks", position: "RHP", team: "IC" },
-    { name: "K. Alvarez", position: "SS", team: "HK" },
-    { name: "T. Whitfield", position: "LHP", team: "TW" },
-    { name: "R. Nakamura", position: "C", team: "SF" },
-    { name: "A. Delgado", position: "OF", team: "RHK" },
-    { name: "L. Fischer", position: "2B", team: "IC" },
-    { name: "C. Reyes", position: "RHP", team: "SUN" },
-    { name: "B. Holt", position: "1B", team: "TW" },
+    { name: "J. Ortiz", team: "RHK" },
+    { name: "M. Sato", team: "SUN" },
+    { name: "D. Brooks", team: "IC" },
+    { name: "K. Alvarez", team: "HK" },
+    { name: "T. Whitfield", team: "TW" },
+    { name: "R. Nakamura", team: "SF" },
+    { name: "A. Delgado", team: "RHK" },
+    { name: "L. Fischer", team: "IC" },
+    { name: "C. Reyes", team: "SUN" },
+    { name: "B. Holt", team: "TW" },
 ];
 // [rank, previousRank | null]
 const PROSPECT_RANKS = {
@@ -43,6 +44,8 @@ async function main() {
         create: {
             name: "DatBear",
             email: "cdowns.cd15@gmail.com",
+            username: "DatBear",
+            passwordHash: hashPassword("changeme123"),
             role: "OWNER",
         },
     });
@@ -98,7 +101,7 @@ async function main() {
         const slug = slugify(p.name);
         const player = existing ??
             (await prisma.player.create({
-                data: { name: p.name, slug, position: p.position, teamId, status: "ACTIVE" },
+                data: { name: p.name, slug, teamId, status: "ACTIVE" },
             }));
         if (existing && !existing.slug) {
             await prisma.player.update({ where: { id: existing.id }, data: { slug } });
@@ -140,7 +143,7 @@ async function main() {
         { round: "R6", locationCode: "LS4", home: "RW", away: "HK", status: "FORFEIT", homeScore: 0, awayScore: 9 },
         { round: "R7", scheduledTime: "3:00 PM", locationCode: "LS1", home: "SF", away: "RHK", status: "FINAL", homeScore: 3, awayScore: 6 },
         { round: "R7", scheduledTime: "3:00 PM", locationCode: "LS2", home: "HK", away: "SUN", status: "FINAL", homeScore: 5, awayScore: 5, innings: 10 },
-        { round: "R7", scheduledTime: "3:00 PM", locationCode: "LS3", home: "RW", away: "CV", status: "LIVE", homeScore: 2, awayScore: 4 },
+        { round: "R7", scheduledTime: "3:00 PM", locationCode: "LS3", home: "RW", away: "CV", status: "FINAL", homeScore: 2, awayScore: 4 },
         { round: "R7", scheduledTime: "3:00 PM", locationCode: "LS4", home: "IC", away: "TW", status: "FINAL", homeScore: 2, awayScore: 7 },
         { round: "R8", scheduledTime: "7:05 PM EST", locationCode: "LS1", home: "IC", away: "RHK", status: "SCHEDULED" },
         { round: "R8", scheduledTime: "2:00 PM EST", locationCode: "LS2", home: "SF", away: "SUN", status: "SCHEDULED" },

@@ -153,7 +153,6 @@ model Player {
   name      String
   slug      String       @unique
   robloxId  String?      @unique
-  position  String
   teamId    String?
   status    PlayerStatus @default(FREE_AGENT)
   createdAt DateTime     @default(now())
@@ -301,9 +300,22 @@ enum AdminRole {
 }
 
 model AdminUser {
-  id        String    @id @default(cuid())
-  name      String
-  email     String    @unique
-  role      AdminRole @default(EDITOR)
-  createdAt DateTime  @default(now())
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  username     String    @unique
+  passwordHash String
+  role         AdminRole @default(EDITOR)
+  createdAt    DateTime  @default(now())
+
+  sessions Session[]
+}
+
+model Session {
+  id          String   @id
+  adminUserId String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 }

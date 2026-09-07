@@ -17,11 +17,11 @@ function Movement({ movement }) {
     </div>);
 }
 export function PipelineCard({ entries }) {
-    return (<div className="flex flex-col bg-ink py-5 px-[22px] text-paper">
+    return (<div className="flex flex-col bg-brand py-5 px-[22px] text-on-brand">
       <div className="mb-3.5 text-xs font-extrabold tracking-wider text-accent">
         PROSPECTS PIPELINE &middot; TOP {entries.length}
       </div>
-      {entries.map((entry, i) => (<div key={entry.rank} className={`flex items-center gap-3.5 py-2.5 ${i < entries.length - 1 ? "border-b border-paper/15" : ""}`}>
+      {entries.map((entry, i) => (<div key={entry.rank} className={`flex items-center gap-3.5 py-2.5 ${i < entries.length - 1 ? "border-b border-on-brand/15" : ""}`}>
           <div className="w-[18px] font-display text-base opacity-55">
             {entry.rank}
           </div>

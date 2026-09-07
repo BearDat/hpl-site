@@ -7,11 +7,10 @@ async function uniquePlayerSlug(name) {
 }
 export async function createPlayer(formData) {
     const name = String(formData.get("name") ?? "").trim();
-    const position = String(formData.get("position") ?? "").trim();
     const teamId = String(formData.get("teamId") ?? "") || null;
     const robloxId = String(formData.get("robloxId") ?? "").trim() || null;
-    if (!name || !position)
-        throw new Error("Name and position are required.");
+    if (!name)
+        throw new Error("Name is required.");
     if (robloxId) {
         const existing = await prisma.player.findUnique({ where: { robloxId } });
         if (existing) {
@@ -20,14 +19,13 @@ export async function createPlayer(formData) {
     }
     const slug = await uniquePlayerSlug(name);
     await prisma.player.create({
-        data: { name, slug, robloxId, position, teamId, status: teamId ? "ACTIVE" : "FREE_AGENT" },
+        data: { name, slug, robloxId, teamId, status: teamId ? "ACTIVE" : "FREE_AGENT" },
     });
     revalidatePath("/admin/roster");
     revalidatePath("/");
 }
 export async function updatePlayer(playerId, formData) {
     const name = String(formData.get("name") ?? "").trim();
-    const position = String(formData.get("position") ?? "").trim();
     const teamId = String(formData.get("teamId") ?? "") || null;
     const robloxId = String(formData.get("robloxId") ?? "").trim() || null;
     const status = String(formData.get("status") ?? "ACTIVE");
@@ -39,7 +37,7 @@ export async function updatePlayer(playerId, formData) {
     }
     await prisma.player.update({
         where: { id: playerId },
-        data: { name, position, teamId, robloxId, status },
+        data: { name, teamId, robloxId, status },
     });
     revalidatePath("/admin/roster");
     revalidatePath("/");

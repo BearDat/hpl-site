@@ -38,9 +38,6 @@ export default async function RosterPage() {
           <Field label="Name">
             <input name="name" required className={inputClass}/>
           </Field>
-          <Field label="Position">
-            <input name="position" required placeholder="OF" className={inputClass}/>
-          </Field>
           <Field label="Team">
             <select name="teamId" className={inputClass} defaultValue="">
               <option value="">Free Agent</option>
@@ -65,7 +62,7 @@ export default async function RosterPage() {
           <Field label="Player">
             <select name="playerId" required className={inputClass}>
               {freeAgents.map((p) => (<option key={p.id} value={p.id}>
-                  {p.name} ({p.position})
+                  {p.name}
                 </option>))}
             </select>
           </Field>
@@ -115,11 +112,12 @@ export default async function RosterPage() {
               <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide opacity-60">
                 Players leaving Team A
               </span>
-              <select name="teamAPlayers" multiple size={6} className={inputClass}>
-                {activePlayers.map((p) => (<option key={p.id} value={p.id}>
-                    {p.name} — {p.team?.name}
-                  </option>))}
-              </select>
+              <div className="flex max-h-40 flex-col gap-1 overflow-y-auto border border-ink/30 bg-surface p-2">
+                {activePlayers.map((p) => (<label key={p.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="teamAPlayers" value={p.id}/>
+                    {p.name} <span className="opacity-55">— {p.team?.name}</span>
+                  </label>))}
+              </div>
             </div>
           </div>
           <div>
@@ -134,11 +132,12 @@ export default async function RosterPage() {
               <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide opacity-60">
                 Players leaving Team B
               </span>
-              <select name="teamBPlayers" multiple size={6} className={inputClass}>
-                {activePlayers.map((p) => (<option key={p.id} value={p.id}>
-                    {p.name} — {p.team?.name}
-                  </option>))}
-              </select>
+              <div className="flex max-h-40 flex-col gap-1 overflow-y-auto border border-ink/30 bg-surface p-2">
+                {activePlayers.map((p) => (<label key={p.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="teamBPlayers" value={p.id}/>
+                    {p.name} <span className="opacity-55">— {p.team?.name}</span>
+                  </label>))}
+              </div>
             </div>
           </div>
           <div className="sm:col-span-2">
@@ -156,9 +155,8 @@ export default async function RosterPage() {
 
       <Panel title="Players">
         <div className="mb-2 hidden text-[10px] font-bold uppercase tracking-wide opacity-50 sm:grid sm:grid-cols-12 sm:gap-2">
-          <div className="col-span-2">Link</div>
-          <div className="col-span-2">Name</div>
-          <div className="col-span-1">Pos</div>
+          <div className="col-span-3">Link</div>
+          <div className="col-span-3">Name</div>
           <div className="col-span-2">Team</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-2">Roblox ID</div>
@@ -196,10 +194,29 @@ export default async function RosterPage() {
       </Panel>
 
       {season && (<Panel title={`Season Stats — ${season.name}`}>
-          {players.map((p) => (<div key={p.id} className="mb-8 last:mb-0">
-              <SeasonStatsForm player={p} seasonId={season.id} stat={regularStatByPlayerId.get(p.id)} isPlayoffs={false}/>
-              <SeasonStatsForm player={p} seasonId={season.id} stat={playoffStatByPlayerId.get(p.id)} isPlayoffs={true}/>
-            </div>))}
+          <p className="mb-3 text-xs opacity-55">Click a player to enter or edit their stats.</p>
+          <div className="flex flex-col gap-1">
+            {players.map((p) => {
+                const reg = regularStatByPlayerId.get(p.id);
+                const po = playoffStatByPlayerId.get(p.id);
+                const hasAny = reg || po;
+                return (<details key={p.id} className="group border-b border-ink/10 py-2 last:border-b-0">
+                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm">
+                    <span className="font-bold">
+                      {p.name} <span className="font-normal opacity-55">— {p.team?.name ?? "Free Agent"}</span>
+                    </span>
+                    <span className="text-xs opacity-45">
+                      {hasAny ? "Stats entered" : "No stats yet"}{" "}
+                      <span className="inline-block transition-transform group-open:rotate-180">▾</span>
+                    </span>
+                  </summary>
+                  <div className="mt-3 pl-1">
+                    <SeasonStatsForm player={p} seasonId={season.id} stat={reg} isPlayoffs={false}/>
+                    <SeasonStatsForm player={p} seasonId={season.id} stat={po} isPlayoffs={true}/>
+                  </div>
+                </details>);
+            })}
+          </div>
         </Panel>)}
 
       <Panel title="Recent Transactions">

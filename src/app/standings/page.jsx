@@ -44,7 +44,7 @@ export default async function StandingsPage() {
             <div className="overflow-x-auto border-[3px] border-ink">
               <table className="w-full min-w-[820px] border-collapse text-sm">
                 <thead>
-                  <tr className="border-b-2 border-ink bg-ink text-paper">
+                  <tr className="border-b-2 border-ink bg-brand text-on-brand">
                     <th className="px-3 py-2 text-left text-[10px] font-extrabold tracking-wide">
                       TEAM
                     </th>
