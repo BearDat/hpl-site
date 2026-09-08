@@ -319,3 +319,11 @@ model Session {
 
   adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 }
+
+// Holds a parsed-but-unconfirmed CSV roster upload while the admin picks
+// which real Team each CSV team funnels into. Deleted once confirmed.
+model PendingRosterImport {
+  id        String   @id @default(cuid())
+  data      Json
+  createdAt DateTime @default(now())
+}

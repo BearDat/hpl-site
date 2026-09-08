@@ -1,7 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { uniqueSlug } from "@/lib/slugify";
+import { parseRosterCsv } from "@/lib/csv-roster-parser";
 async function uniquePlayerSlug(name) {
     return uniqueSlug(name, async (slug) => (await prisma.player.findUnique({ where: { slug } })) !== null, "player");
 }
@@ -160,4 +162,48 @@ export async function tradePlayers(formData) {
     ]);
     revalidatePath("/admin/roster");
     revalidatePath("/");
+}
+export async function previewRosterImport(formData) {
+    const file = formData.get("file");
+    let text = String(formData.get("csvText") ?? "");
+    if (file instanceof File && file.size > 0) {
+        text = await file.text();
+    }
+    if (!text.trim()) {
+        throw new Error("Provide a CSV file or paste CSV text.");
+    }
+    const teams = parseRosterCsv(text);
+    if (teams.length === 0) {
+        throw new Error("Couldn't find any teams/players in that CSV.");
+    }
+    const pending = await prisma.pendingRosterImport.create({ data: { data: { teams } } });
+    redirect(`/admin/roster?importId=${pending.id}`);
+}
+export async function cancelRosterImport(formData) {
+    const importId = String(formData.get("importId") ?? "");
+    if (!importId) return;
+    await prisma.pendingRosterImport.delete({ where: { id: importId } }).catch(() => {});
+    redirect("/admin/roster");
+}
+export async function commitRosterImport(formData) {
+    const importId = String(formData.get("importId") ?? "");
+    const pending = await prisma.pendingRosterImport.findUniqueOrThrow({ where: { id: importId } });
+    const teamsData = pending.data.teams;
+    for (let i = 0; i < teamsData.length; i++) {
+        const teamId = String(formData.get(`teamId_${i}`) ?? "");
+        if (!teamId) continue;
+        for (const name of teamsData[i].players) {
+            const existing = await prisma.player.findFirst({ where: { name } });
+            if (existing) {
+                await prisma.player.update({ where: { id: existing.id }, data: { teamId, status: "ACTIVE" } });
+            } else {
+                const slug = await uniquePlayerSlug(name);
+                await prisma.player.create({ data: { name, slug, teamId, status: "ACTIVE" } });
+            }
+        }
+    }
+    await prisma.pendingRosterImport.delete({ where: { id: importId } });
+    revalidatePath("/admin/roster");
+    revalidatePath("/");
+    redirect("/admin/roster");
 }

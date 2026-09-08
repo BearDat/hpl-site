@@ -1,13 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentSeason } from "@/lib/queries";
-import { createPlayer, signPlayer, releasePlayer, tradePlayers, mergePlayers } from "@/lib/actions/roster";
-import { Panel, Field, inputClass, buttonClass } from "@/components/admin/ui";
+import { createPlayer, signPlayer, releasePlayer, tradePlayers, mergePlayers, previewRosterImport, cancelRosterImport, commitRosterImport, } from "@/lib/actions/roster";
+import { Panel, Field, inputClass, buttonClass, buttonSecondaryClass } from "@/components/admin/ui";
 import { PlayerRow } from "@/components/admin/PlayerRow";
 import { SeasonStatsForm } from "@/components/admin/SeasonStatsForm";
 export const dynamic = "force-dynamic";
-export default async function RosterPage() {
+function findMatchingTeamId(csvName, teams) {
+    const norm = (s) => s.trim().toLowerCase();
+    const exact = teams.find((t) => norm(t.name) === norm(csvName));
+    if (exact) return exact.id;
+    const partial = teams.find((t) => norm(csvName).includes(norm(t.name)) || norm(t.name).includes(norm(csvName)));
+    return partial?.id ?? "";
+}
+export default async function RosterPage(props) {
+    const searchParams = await props.searchParams;
+    const importId = String(searchParams?.importId ?? "");
     const season = await getCurrentSeason();
-    const [teams, players, transactions, seasonStats] = await Promise.all([
+    const [teams, players, transactions, seasonStats, pendingImport] = await Promise.all([
         prisma.team.findMany({ orderBy: { name: "asc" } }),
         prisma.player.findMany({
             include: { team: true },
@@ -25,6 +34,9 @@ export default async function RosterPage() {
         season
             ? prisma.playerSeasonStat.findMany({ where: { seasonId: season.id } })
             : Promise.resolve([]),
+        importId
+            ? prisma.pendingRosterImport.findUnique({ where: { id: importId } })
+            : Promise.resolve(null),
     ]);
     const freeAgents = players.filter((p) => !p.teamId);
     const activePlayers = players.filter((p) => p.teamId);
@@ -52,6 +64,61 @@ export default async function RosterPage() {
           <div className="flex items-end">
             <button type="submit" className={buttonClass}>
               Add Player
+            </button>
+          </div>
+        </form>
+      </Panel>
+
+      {pendingImport && (<Panel title="Confirm Roster Import">
+          <p className="mb-4 text-sm opacity-60">
+            Found {pendingImport.data.teams.length} team(s) in the CSV. Pick which of your
+            teams each one should import into, or leave it as &quot;Skip&quot; to not
+            import that group. Players already in the roster are matched by name and just
+            get moved to the new team; everyone else is created fresh.
+          </p>
+          <form action={commitRosterImport} className="flex flex-col gap-4">
+            <input type="hidden" name="importId" value={pendingImport.id}/>
+            {pendingImport.data.teams.map((t, i) => (<div key={i} className="border-b border-ink/10 pb-4 last:border-b-0">
+                <div className="mb-2 flex flex-wrap items-center gap-3">
+                  <span className="min-w-0 flex-1 font-bold">{t.csvName}</span>
+                  <span className="text-xs opacity-55">{t.players.length} players</span>
+                  <select name={`teamId_${i}`} defaultValue={findMatchingTeamId(t.csvName, teams)} className={`${inputClass} !w-56`}>
+                    <option value="">Skip this team</option>
+                    {teams.map((team) => (<option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>))}
+                  </select>
+                </div>
+                <div className="text-xs opacity-60">{t.players.join(", ")}</div>
+              </div>))}
+            <div className="flex gap-3">
+              <button type="submit" className={buttonClass}>
+                Import Rosters
+              </button>
+              <button type="submit" formAction={cancelRosterImport} className={buttonSecondaryClass}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </Panel>)}
+
+      <Panel title="Import Roster from CSV">
+        <p className="mb-3 text-sm opacity-60">
+          Upload a roster export (teams laid out side by side, one player per row).
+          You&apos;ll get a chance to map each CSV team to one of your real teams before
+          anything is imported.
+        </p>
+        <form action={previewRosterImport} encType="multipart/form-data" className="flex flex-col gap-3">
+          <Field label="CSV file">
+            <input type="file" name="file" accept=".csv,text/csv" className="text-xs"/>
+          </Field>
+          <div className="text-xs opacity-55">— or paste CSV text below —</div>
+          <Field label="Paste CSV">
+            <textarea name="csvText" rows={4} className={`${inputClass} font-mono text-xs`}/>
+          </Field>
+          <div>
+            <button type="submit" className={buttonClass}>
+              Preview Import
             </button>
           </div>
         </form>
