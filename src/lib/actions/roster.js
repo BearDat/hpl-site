@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { uniqueSlug } from "@/lib/slugify";
+import { slugify, uniqueSlug } from "@/lib/slugify";
 import { parseRosterCsv } from "@/lib/csv-roster-parser";
 import { resolveRobloxIds } from "@/lib/roblox";
 async function uniquePlayerSlug(name) {
@@ -202,17 +202,54 @@ export async function commitRosterImport(formData) {
     const importId = String(formData.get("importId") ?? "");
     const pending = await prisma.pendingRosterImport.findUniqueOrThrow({ where: { id: importId } });
     const teamsData = pending.data.teams;
-    for (let i = 0; i < teamsData.length; i++) {
-        const teamId = String(formData.get(`teamId_${i}`) ?? "");
-        if (!teamId) continue;
-        for (const { name, robloxId } of teamsData[i].players) {
-            // Roblox IDs are stable even when a username changes, so prefer
-            // matching on that over the (possibly stale) name.
-            const existing = robloxId
-                ? await prisma.player.findUnique({ where: { robloxId } })
-                : await prisma.player.findFirst({ where: { name } });
+    const selections = teamsData
+        .map((team, i) => ({ team, teamId: String(formData.get(`teamId_${i}`) ?? "") }))
+        .filter((s) => s.teamId);
+    // A CSV like the full roster sheet can be 150-200+ players. Looking each
+    // one up (and each slug candidate) with its own round trip serialized
+    // hundreds of sequential DB calls — slow enough to hit the serverless
+    // function's time limit mid-import, which both aborted the request and
+    // left only whatever had committed so far. Batch it into a couple of
+    // bulk reads instead.
+    const robloxIds = [];
+    const names = [];
+    for (const { team } of selections) {
+        for (const p of team.players) {
+            if (p.robloxId) robloxIds.push(p.robloxId);
+            else names.push(p.name);
+        }
+    }
+    const existingPlayers = selections.length === 0
+        ? []
+        : await prisma.player.findMany({
+            where: {
+                OR: [
+                    ...(robloxIds.length ? [{ robloxId: { in: robloxIds } }] : []),
+                    ...(names.length ? [{ name: { in: names } }] : []),
+                ],
+            },
+        });
+    const byRobloxId = new Map(existingPlayers.filter((p) => p.robloxId).map((p) => [p.robloxId, p]));
+    const byName = new Map(existingPlayers.map((p) => [p.name, p]));
+    const existingSlugs = new Set((await prisma.player.findMany({ select: { slug: true } })).map((p) => p.slug));
+    function nextSlug(name) {
+        const base = slugify(name) || "player";
+        let slug = base;
+        let n = 1;
+        while (existingSlugs.has(slug)) {
+            n += 1;
+            slug = `${base}-${n}`;
+        }
+        existingSlugs.add(slug);
+        return slug;
+    }
+    const updates = [];
+    const creates = new Map();
+    for (const { team, teamId } of selections) {
+        for (const { name, robloxId } of team.players) {
+            const existing = (robloxId && byRobloxId.get(robloxId)) || byName.get(name);
             if (existing) {
-                await prisma.player.update({
+                updates.push(prisma.player.update({
                     where: { id: existing.id },
                     data: {
                         teamId,
@@ -222,15 +259,27 @@ export async function commitRosterImport(formData) {
                         // a (possibly different) one on record.
                         ...(robloxId && !existing.robloxId ? { robloxId } : {}),
                     },
-                });
+                }));
+                // Claim it so a later duplicate of this same person in the
+                // import updates this row again instead of creating a new one.
+                if (robloxId) byRobloxId.set(robloxId, existing);
+                byName.set(name, existing);
             } else {
-                const slug = await uniquePlayerSlug(name);
-                await prisma.player.create({ data: { name, slug, robloxId, teamId, status: "ACTIVE" } });
+                // Same claim, for a person who appears more than once but
+                // isn't in the DB yet — collapse to a single create.
+                const key = robloxId ?? `name:${name}`;
+                creates.set(key, { name, slug: creates.get(key)?.slug ?? nextSlug(name), robloxId, teamId, status: "ACTIVE" });
             }
         }
+    }
+    if (creates.size > 0) {
+        await prisma.player.createMany({ data: Array.from(creates.values()) });
+    }
+    if (updates.length > 0) {
+        await prisma.$transaction(updates);
     }
     await prisma.pendingRosterImport.delete({ where: { id: importId } });
     revalidatePath("/admin/roster");
     revalidatePath("/");
-    redirect("/admin/roster");
+    redirect(`/admin/roster?imported=${creates.size + updates.length}`);
 }

@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentSeason } from "@/lib/queries";
-import { createPlayer, signPlayer, releasePlayer, tradePlayers, mergePlayers, previewRosterImport, cancelRosterImport, commitRosterImport, } from "@/lib/actions/roster";
+import { createPlayer, signPlayer, releasePlayer, mergePlayers, previewRosterImport, cancelRosterImport, commitRosterImport, } from "@/lib/actions/roster";
 import { Panel, Field, inputClass, buttonClass, buttonSecondaryClass } from "@/components/admin/ui";
 import { PlayerRow } from "@/components/admin/PlayerRow";
 import { SeasonStatsForm } from "@/components/admin/SeasonStatsForm";
+import { TradeForm } from "@/components/admin/TradeForm";
 export const dynamic = "force-dynamic";
 function findMatchingTeamId(csvName, teams) {
     const norm = (s) => s.trim().toLowerCase();
@@ -15,6 +16,7 @@ function findMatchingTeamId(csvName, teams) {
 export default async function RosterPage(props) {
     const searchParams = await props.searchParams;
     const importId = String(searchParams?.importId ?? "");
+    const imported = searchParams?.imported != null ? Number(searchParams.imported) : null;
     const season = await getCurrentSeason();
     const [teams, players, transactions, seasonStats, pendingImport] = await Promise.all([
         prisma.team.findMany({ orderBy: { name: "asc" } }),
@@ -44,6 +46,10 @@ export default async function RosterPage(props) {
     const playoffStatByPlayerId = new Map(seasonStats.filter((s) => s.isPlayoffs).map((s) => [s.playerId, s]));
     return (<div>
       <h1 className="mb-6 font-display text-2xl">Roster Management</h1>
+
+      {imported !== null && (<div className="mb-6 border border-ink/20 bg-paper p-3 text-sm">
+          <span className="font-bold">{imported} player(s) imported.</span>
+        </div>)}
 
       <Panel title="Add Player">
         <form action={createPlayer} className="grid grid-cols-2 gap-4 sm:grid-cols-5">
@@ -177,58 +183,7 @@ export default async function RosterPage(props) {
       </Panel>
 
       <Panel title="Trade">
-        <form action={tradePlayers} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <Field label="Team A">
-              <select name="teamAId" required className={inputClass}>
-                {teams.map((t) => (<option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>))}
-              </select>
-            </Field>
-            <div className="mt-3">
-              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide opacity-60">
-                Players leaving Team A
-              </span>
-              <div className="flex max-h-40 flex-col gap-1 overflow-y-auto border border-ink/30 bg-surface p-2">
-                {activePlayers.map((p) => (<label key={p.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="teamAPlayers" value={p.id}/>
-                    {p.name} <span className="opacity-55">— {p.team?.name}</span>
-                  </label>))}
-              </div>
-            </div>
-          </div>
-          <div>
-            <Field label="Team B">
-              <select name="teamBId" required className={inputClass}>
-                {teams.map((t) => (<option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>))}
-              </select>
-            </Field>
-            <div className="mt-3">
-              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide opacity-60">
-                Players leaving Team B
-              </span>
-              <div className="flex max-h-40 flex-col gap-1 overflow-y-auto border border-ink/30 bg-surface p-2">
-                {activePlayers.map((p) => (<label key={p.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="teamBPlayers" value={p.id}/>
-                    {p.name} <span className="opacity-55">— {p.team?.name}</span>
-                  </label>))}
-              </div>
-            </div>
-          </div>
-          <div className="sm:col-span-2">
-            <Field label="Notes">
-              <input name="notes" className={inputClass}/>
-            </Field>
-          </div>
-          <div className="sm:col-span-2">
-            <button type="submit" className={buttonClass}>
-              Execute Trade
-            </button>
-          </div>
-        </form>
+        <TradeForm teams={teams} activePlayers={activePlayers}/>
       </Panel>
 
       <Panel title="Players">
