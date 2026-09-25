@@ -73,15 +73,20 @@ export default async function RosterPage(props) {
           <p className="mb-4 text-sm opacity-60">
             Found {pendingImport.data.teams.length} team(s) in the CSV. Pick which of your
             teams each one should import into, or leave it as &quot;Skip&quot; to not
-            import that group. Players already in the roster are matched by name and just
-            get moved to the new team; everyone else is created fresh.
+            import that group. Players are matched to an existing Player by Roblox ID when
+            one was resolved (so a username change won&apos;t create a duplicate), or by name
+            otherwise; everyone else is created fresh.
           </p>
           <form action={commitRosterImport} className="flex flex-col gap-4">
             <input type="hidden" name="importId" value={pendingImport.id}/>
-            {pendingImport.data.teams.map((t, i) => (<div key={i} className="border-b border-ink/10 pb-4 last:border-b-0">
+            {pendingImport.data.teams.map((t, i) => {
+            const matchedCount = t.players.filter((p) => p.robloxId).length;
+            return (<div key={i} className="border-b border-ink/10 pb-4 last:border-b-0">
                 <div className="mb-2 flex flex-wrap items-center gap-3">
                   <span className="min-w-0 flex-1 font-bold">{t.csvName}</span>
-                  <span className="text-xs opacity-55">{t.players.length} players</span>
+                  <span className="text-xs opacity-55">
+                    {t.players.length} players &middot; {matchedCount} matched to Roblox
+                  </span>
                   <select name={`teamId_${i}`} defaultValue={findMatchingTeamId(t.csvName, teams)} className={`${inputClass} !w-56`}>
                     <option value="">Skip this team</option>
                     {teams.map((team) => (<option key={team.id} value={team.id}>
@@ -89,8 +94,14 @@ export default async function RosterPage(props) {
                       </option>))}
                   </select>
                 </div>
-                <div className="text-xs opacity-60">{t.players.join(", ")}</div>
-              </div>))}
+                <div className="text-xs opacity-60">
+                  {t.players.map((p, idx) => (<span key={p.name}>
+                      {idx > 0 && ", "}
+                      <span className={p.robloxId ? undefined : "text-[#c1391f]"}>{p.name}</span>
+                    </span>))}
+                </div>
+              </div>);
+        })}
             <div className="flex gap-3">
               <button type="submit" className={buttonClass}>
                 Import Rosters

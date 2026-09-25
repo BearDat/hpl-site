@@ -165,7 +165,8 @@ export async function updateGame(gameId, formData) {
             awayTeamId,
             homeScore: homeScoreRaw ? Number(homeScoreRaw) : null,
             awayScore: awayScoreRaw ? Number(awayScoreRaw) : null,
-            innings: inningsRaw ? Number(inningsRaw) : null,
+            // A completed game is 9 innings unless the admin says otherwise.
+            innings: inningsRaw ? Number(inningsRaw) : status === "FINAL" ? 9 : null,
             forfeitWinnerId: status === "FORFEIT" ? forfeitWinnerId : null,
         },
     });

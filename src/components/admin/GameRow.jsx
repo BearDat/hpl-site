@@ -24,7 +24,7 @@ export function GameRow({ game, teams = [] }) {
         </select>
         <input type="number" name="awayScore" defaultValue={game.awayScore ?? ""} placeholder="Away" className="col-span-1 border border-ink/30 bg-surface px-2 py-1.5 text-xs"/>
         <input type="number" name="homeScore" defaultValue={game.homeScore ?? ""} placeholder="Home" className="col-span-1 border border-ink/30 bg-surface px-2 py-1.5 text-xs"/>
-        <input type="number" name="innings" defaultValue={game.innings ?? ""} placeholder="Innings" className="col-span-2 border border-ink/30 bg-surface px-2 py-1.5 text-xs"/>
+        <input type="number" name="innings" defaultValue={game.innings ?? ""} placeholder="Innings (9)" className="col-span-2 border border-ink/30 bg-surface px-2 py-1.5 text-xs"/>
         <select name="forfeitWinnerId" defaultValue={game.forfeitWinnerId ?? ""} className="col-span-2 border border-ink/30 bg-surface px-2 py-1.5 text-xs">
           <option value="">Forfeit winner…</option>
           <option value={game.homeTeam.id}>{game.homeTeam.shortCode} (home)</option>

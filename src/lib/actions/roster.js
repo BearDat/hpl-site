@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { uniqueSlug } from "@/lib/slugify";
 import { parseRosterCsv } from "@/lib/csv-roster-parser";
+import { resolveRobloxIds } from "@/lib/roblox";
 async function uniquePlayerSlug(name) {
     return uniqueSlug(name, async (slug) => (await prisma.player.findUnique({ where: { slug } })) !== null, "player");
 }
@@ -172,10 +173,22 @@ export async function previewRosterImport(formData) {
     if (!text.trim()) {
         throw new Error("Provide a CSV file or paste CSV text.");
     }
-    const teams = parseRosterCsv(text);
-    if (teams.length === 0) {
+    const parsedTeams = parseRosterCsv(text);
+    if (parsedTeams.length === 0) {
         throw new Error("Couldn't find any teams/players in that CSV.");
     }
+    // The sheet lists Roblox usernames. Resolve each to its stable numeric
+    // Roblox user ID up front, so a player stays matched to the same
+    // Player row (and page) even after they change their username.
+    const allNames = parsedTeams.flatMap((t) => t.players);
+    const robloxIds = await resolveRobloxIds(allNames);
+    const teams = parsedTeams.map((t) => ({
+        csvName: t.csvName,
+        players: t.players.map((name) => ({
+            name,
+            robloxId: robloxIds.get(name.toLowerCase())?.id ?? null,
+        })),
+    }));
     const pending = await prisma.pendingRosterImport.create({ data: { data: { teams } } });
     redirect(`/admin/roster?importId=${pending.id}`);
 }
@@ -192,13 +205,27 @@ export async function commitRosterImport(formData) {
     for (let i = 0; i < teamsData.length; i++) {
         const teamId = String(formData.get(`teamId_${i}`) ?? "");
         if (!teamId) continue;
-        for (const name of teamsData[i].players) {
-            const existing = await prisma.player.findFirst({ where: { name } });
+        for (const { name, robloxId } of teamsData[i].players) {
+            // Roblox IDs are stable even when a username changes, so prefer
+            // matching on that over the (possibly stale) name.
+            const existing = robloxId
+                ? await prisma.player.findUnique({ where: { robloxId } })
+                : await prisma.player.findFirst({ where: { name } });
             if (existing) {
-                await prisma.player.update({ where: { id: existing.id }, data: { teamId, status: "ACTIVE" } });
+                await prisma.player.update({
+                    where: { id: existing.id },
+                    data: {
+                        teamId,
+                        status: "ACTIVE",
+                        name,
+                        // Only backfill robloxId if this player didn't already have
+                        // a (possibly different) one on record.
+                        ...(robloxId && !existing.robloxId ? { robloxId } : {}),
+                    },
+                });
             } else {
                 const slug = await uniquePlayerSlug(name);
-                await prisma.player.create({ data: { name, slug, teamId, status: "ACTIVE" } });
+                await prisma.player.create({ data: { name, slug, robloxId, teamId, status: "ACTIVE" } });
             }
         }
     }
