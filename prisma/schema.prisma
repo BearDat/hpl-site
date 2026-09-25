@@ -329,3 +329,12 @@ model PendingRosterImport {
   data      Json
   createdAt DateTime @default(now())
 }
+
+// Holds a parsed-but-unconfirmed bulk schedule paste while the admin picks
+// which real Team each unrecognized name maps to. Deleted once confirmed.
+model PendingScheduleImport {
+  id        String   @id @default(cuid())
+  seasonId  String
+  data      Json
+  createdAt DateTime @default(now())
+}

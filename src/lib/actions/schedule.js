@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { parseScheduleText } from "@/lib/schedule-parser";
 export async function createGame(formData) {
@@ -18,45 +19,97 @@ export async function createGame(formData) {
     revalidatePath("/admin/schedule");
     revalidatePath("/");
 }
-export async function bulkImportGames(seasonId, prevState, formData) {
+export async function previewBulkImportGames(seasonId, formData) {
     const text = String(formData.get("scheduleText") ?? "");
     if (!text.trim()) {
-        return { createdCount: 0, errors: ["Paste schedule text before importing."] };
+        throw new Error("Paste schedule text before importing.");
     }
     const rounds = parseScheduleText(text);
     if (rounds.length === 0) {
-        return { createdCount: 0, errors: ["Couldn't find any rounds in that text."] };
+        throw new Error("Couldn't find any rounds in that text.");
     }
     const teams = await prisma.team.findMany();
     const findTeam = (name) => teams.find((t) => t.name.toLowerCase() === name.toLowerCase());
-    const errors = [];
-    const toCreate = [];
-    for (const round of rounds) {
-        for (const game of round.games) {
+    const unmatchedNames = new Set();
+    const preppedRounds = rounds.map((round) => ({
+        round: round.round,
+        scheduledTime: round.scheduledTime ?? null,
+        games: round.games.map((game) => {
             const home = findTeam(game.home);
             const away = findTeam(game.away);
             if (!home)
-                errors.push(`${round.round}: unknown team "${game.home}"`);
+                unmatchedNames.add(game.home);
             if (!away)
-                errors.push(`${round.round}: unknown team "${game.away}"`);
-            if (!home || !away)
+                unmatchedNames.add(game.away);
+            return {
+                homeName: game.home,
+                awayName: game.away,
+                homeTeamId: home?.id ?? null,
+                awayTeamId: away?.id ?? null,
+                location: game.location ?? null,
+            };
+        }),
+    }));
+    // Nothing unrecognized — just create the games directly, no confirmation needed.
+    if (unmatchedNames.size === 0) {
+        const toCreate = preppedRounds.flatMap((round) => round.games.map((game) => ({
+            seasonId,
+            round: round.round,
+            scheduledTime: round.scheduledTime ?? undefined,
+            locationCode: game.location ?? undefined,
+            homeTeamId: game.homeTeamId,
+            awayTeamId: game.awayTeamId,
+        })));
+        await prisma.game.createMany({ data: toCreate });
+        revalidatePath("/admin/schedule");
+        revalidatePath("/");
+        redirect("/admin/schedule");
+    }
+    const pending = await prisma.pendingScheduleImport.create({
+        data: { seasonId, data: { rounds: preppedRounds, unmatchedNames: Array.from(unmatchedNames) } },
+    });
+    redirect(`/admin/schedule?importId=${pending.id}`);
+}
+export async function cancelBulkScheduleImport(formData) {
+    const importId = String(formData.get("importId") ?? "");
+    if (!importId)
+        return;
+    await prisma.pendingScheduleImport.delete({ where: { id: importId } }).catch(() => { });
+    redirect("/admin/schedule");
+}
+export async function commitBulkScheduleImport(formData) {
+    const importId = String(formData.get("importId") ?? "");
+    const pending = await prisma.pendingScheduleImport.findUniqueOrThrow({ where: { id: importId } });
+    const nameMap = new Map();
+    for (const name of pending.data.unmatchedNames) {
+        const chosen = String(formData.get(`teamFor_${name}`) ?? "");
+        if (chosen)
+            nameMap.set(name, chosen);
+    }
+    const toCreate = [];
+    for (const round of pending.data.rounds) {
+        for (const game of round.games) {
+            const homeTeamId = game.homeTeamId ?? nameMap.get(game.homeName) ?? null;
+            const awayTeamId = game.awayTeamId ?? nameMap.get(game.awayName) ?? null;
+            if (!homeTeamId || !awayTeamId || homeTeamId === awayTeamId)
                 continue;
             toCreate.push({
-                seasonId,
+                seasonId: pending.seasonId,
                 round: round.round,
-                scheduledTime: round.scheduledTime,
-                locationCode: game.location,
-                homeTeamId: home.id,
-                awayTeamId: away.id,
+                scheduledTime: round.scheduledTime ?? undefined,
+                locationCode: game.location ?? undefined,
+                homeTeamId,
+                awayTeamId,
             });
         }
     }
     if (toCreate.length > 0) {
         await prisma.game.createMany({ data: toCreate });
-        revalidatePath("/admin/schedule");
-        revalidatePath("/");
     }
-    return { createdCount: toCreate.length, errors };
+    await prisma.pendingScheduleImport.delete({ where: { id: importId } });
+    revalidatePath("/admin/schedule");
+    revalidatePath("/");
+    redirect("/admin/schedule");
 }
 export async function updateGame(gameId, formData) {
     const status = String(formData.get("status") ?? "SCHEDULED");
