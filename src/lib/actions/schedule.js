@@ -19,6 +19,18 @@ export async function createGame(formData) {
     revalidatePath("/admin/schedule");
     revalidatePath("/");
 }
+// A game is treated as "already added" if the same two teams are already
+// scheduled to play each other in the same round this season.
+function dedupeKey(round, homeTeamId, awayTeamId) {
+    return `${round}::${homeTeamId}::${awayTeamId}`;
+}
+async function existingDedupeKeys(seasonId) {
+    const existing = await prisma.game.findMany({
+        where: { seasonId, playoffSeriesId: null },
+        select: { round: true, homeTeamId: true, awayTeamId: true },
+    });
+    return new Set(existing.map((g) => dedupeKey(g.round, g.homeTeamId, g.awayTeamId)));
+}
 export async function previewBulkImportGames(seasonId, formData) {
     const text = String(formData.get("scheduleText") ?? "");
     if (!text.trim()) {
@@ -52,18 +64,33 @@ export async function previewBulkImportGames(seasonId, formData) {
     }));
     // Nothing unrecognized — just create the games directly, no confirmation needed.
     if (unmatchedNames.size === 0) {
-        const toCreate = preppedRounds.flatMap((round) => round.games.map((game) => ({
-            seasonId,
-            round: round.round,
-            scheduledTime: round.scheduledTime ?? undefined,
-            locationCode: game.location ?? undefined,
-            homeTeamId: game.homeTeamId,
-            awayTeamId: game.awayTeamId,
-        })));
-        await prisma.game.createMany({ data: toCreate });
-        revalidatePath("/admin/schedule");
-        revalidatePath("/");
-        redirect("/admin/schedule");
+        const seenKeys = await existingDedupeKeys(seasonId);
+        let duplicateCount = 0;
+        const toCreate = [];
+        for (const round of preppedRounds) {
+            for (const game of round.games) {
+                const key = dedupeKey(round.round, game.homeTeamId, game.awayTeamId);
+                if (seenKeys.has(key)) {
+                    duplicateCount += 1;
+                    continue;
+                }
+                seenKeys.add(key);
+                toCreate.push({
+                    seasonId,
+                    round: round.round,
+                    scheduledTime: round.scheduledTime ?? undefined,
+                    locationCode: game.location ?? undefined,
+                    homeTeamId: game.homeTeamId,
+                    awayTeamId: game.awayTeamId,
+                });
+            }
+        }
+        if (toCreate.length > 0) {
+            await prisma.game.createMany({ data: toCreate });
+            revalidatePath("/admin/schedule");
+            revalidatePath("/");
+        }
+        redirect(`/admin/schedule?imported=${toCreate.length}&duplicates=${duplicateCount}`);
     }
     const pending = await prisma.pendingScheduleImport.create({
         data: { seasonId, data: { rounds: preppedRounds, unmatchedNames: Array.from(unmatchedNames) } },
@@ -86,6 +113,8 @@ export async function commitBulkScheduleImport(formData) {
         if (chosen)
             nameMap.set(name, chosen);
     }
+    const seenKeys = await existingDedupeKeys(pending.seasonId);
+    let duplicateCount = 0;
     const toCreate = [];
     for (const round of pending.data.rounds) {
         for (const game of round.games) {
@@ -93,6 +122,12 @@ export async function commitBulkScheduleImport(formData) {
             const awayTeamId = game.awayTeamId ?? nameMap.get(game.awayName) ?? null;
             if (!homeTeamId || !awayTeamId || homeTeamId === awayTeamId)
                 continue;
+            const key = dedupeKey(round.round, homeTeamId, awayTeamId);
+            if (seenKeys.has(key)) {
+                duplicateCount += 1;
+                continue;
+            }
+            seenKeys.add(key);
             toCreate.push({
                 seasonId: pending.seasonId,
                 round: round.round,
@@ -109,7 +144,7 @@ export async function commitBulkScheduleImport(formData) {
     await prisma.pendingScheduleImport.delete({ where: { id: importId } });
     revalidatePath("/admin/schedule");
     revalidatePath("/");
-    redirect("/admin/schedule");
+    redirect(`/admin/schedule?imported=${toCreate.length}&duplicates=${duplicateCount}`);
 }
 export async function updateGame(gameId, formData) {
     const status = String(formData.get("status") ?? "SCHEDULED");
@@ -134,6 +169,16 @@ export async function updateGame(gameId, formData) {
             forfeitWinnerId: status === "FORFEIT" ? forfeitWinnerId : null,
         },
     });
+    revalidatePath("/admin/schedule");
+    revalidatePath("/");
+}
+export async function clearSchedule(formData) {
+    const seasonId = String(formData.get("seasonId") ?? "");
+    if (!seasonId)
+        return;
+    // Only the regular-season schedule — playoff games live under their
+    // own series and are managed from the Playoffs admin page.
+    await prisma.game.deleteMany({ where: { seasonId, playoffSeriesId: null } });
     revalidatePath("/admin/schedule");
     revalidatePath("/");
 }

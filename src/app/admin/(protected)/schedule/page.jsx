@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentSeason } from "@/lib/queries";
 import { createGame, cancelBulkScheduleImport, commitBulkScheduleImport } from "@/lib/actions/schedule";
+import { compareRounds } from "@/lib/round-sort";
 import { Panel, Field, inputClass, buttonClass, buttonSecondaryClass } from "@/components/admin/ui";
 import { BulkImportForm } from "@/components/admin/BulkImportForm";
 import { GameRow } from "@/components/admin/GameRow";
+import { ClearScheduleButton } from "@/components/admin/ClearScheduleButton";
 export const dynamic = "force-dynamic";
 function guessTeamId(name, teams) {
     const norm = (s) => s.trim().toLowerCase();
@@ -15,6 +17,8 @@ function guessTeamId(name, teams) {
 export default async function SchedulePage(props) {
     const searchParams = await props.searchParams;
     const importId = String(searchParams?.importId ?? "");
+    const imported = searchParams?.imported != null ? Number(searchParams.imported) : null;
+    const duplicates = searchParams?.duplicates != null ? Number(searchParams.duplicates) : null;
     const season = await getCurrentSeason();
     if (!season) {
         return (<Panel title="Schedule & Scores">
@@ -54,6 +58,11 @@ export default async function SchedulePage(props) {
     return (<div>
       <h1 className="mb-6 font-display text-2xl">Schedule &amp; Scores</h1>
       <p className="mb-6 text-sm opacity-60">Managing games for {season.name}.</p>
+
+      {imported !== null && (<div className="mb-6 border border-ink/20 bg-paper p-3 text-sm">
+          <span className="font-bold">{imported} game(s) imported.</span>
+          {duplicates > 0 && (<span className="opacity-60"> {duplicates} already on the schedule were skipped.</span>)}
+        </div>)}
 
       {pendingImport && (<Panel title="Confirm Schedule Import">
           <p className="mb-4 text-sm opacity-60">
@@ -124,7 +133,12 @@ export default async function SchedulePage(props) {
       </Panel>
 
       <Panel title="Games">
-        {rounds.size === 0 ? (<p className="text-sm opacity-60">No games scheduled yet.</p>) : (Array.from(rounds.entries()).map(([round, roundGames]) => (<div key={round} className="mb-6 last:mb-0">
+        <div className="mb-4 flex justify-end">
+          <ClearScheduleButton seasonId={season.id}/>
+        </div>
+        {rounds.size === 0 ? (<p className="text-sm opacity-60">No games scheduled yet.</p>) : (Array.from(rounds.entries())
+            .sort((a, b) => compareRounds(a[0], b[0]))
+            .map(([round, roundGames]) => (<div key={round} className="mb-6 last:mb-0">
               <div className="mb-1 text-xs font-extrabold tracking-wide opacity-55">
                 {round.toUpperCase()}
               </div>

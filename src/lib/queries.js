@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { compareRounds } from "./round-sort";
 export async function getCurrentSeason() {
     const season = await prisma.season.findFirst({ where: { isCurrent: true } });
     return season;
@@ -208,13 +209,16 @@ function toScoreboardGame(g) {
     };
 }
 export async function getScoreboardGames(seasonId, limit = 6) {
+    // Round labels ("R1".."R20") don't sort correctly as plain strings, so
+    // fetch everything and sort naturally in JS instead of relying on the
+    // DB's lexicographic ORDER BY + LIMIT (see compareRounds).
     const games = await prisma.game.findMany({
         where: { seasonId, playoffSeriesId: null },
         include: { homeTeam: true, awayTeam: true },
-        orderBy: [{ round: "desc" }, { createdAt: "asc" }],
-        take: limit,
+        orderBy: { createdAt: "asc" },
     });
-    return games.reverse().map(toScoreboardGame);
+    const sorted = [...games].sort((a, b) => compareRounds(b.round, a.round) || a.createdAt - b.createdAt);
+    return sorted.slice(0, limit).reverse().map(toScoreboardGame);
 }
 export async function getAllScores(seasonId) {
     const games = await prisma.game.findMany({
@@ -228,7 +232,9 @@ export async function getAllScores(seasonId) {
             rounds.set(g.round, []);
         rounds.get(g.round).push(toScoreboardGame(g));
     }
-    return Array.from(rounds.entries()).map(([round, roundGames]) => ({ round, games: roundGames }));
+    return Array.from(rounds.entries())
+        .map(([round, roundGames]) => ({ round, games: roundGames }))
+        .sort((a, b) => compareRounds(a.round, b.round));
 }
 export async function getPipelineTop(n = 5) {
     const ranks = await prisma.prospectRank.findMany({
