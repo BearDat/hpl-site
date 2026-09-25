@@ -113,22 +113,29 @@ export async function getStandings(seasonId) {
         const wins = recent.filter((r) => r === "W").length;
         return `${wins}-${recent.length - wins}`;
     }
-    // Playoff qualification is a single league-wide pool of the top
-    // `playoffTeamCount` teams by wins, not per division (see
-    // generateFirstRound in actions/playoffs.js) — so clinch/elimination
-    // status is computed across every team in the season, not per division.
-    const pool = seasonTeams.map((st) => {
+    // Playoff qualification pool: either one league-wide pool of the top
+    // `playoffTeamCount` teams by wins, or (when playoffByDivision is set)
+    // a separate top-`playoffTeamCount` pool per division — see
+    // generateFirstRound in actions/playoffs.js, which seeds the same way.
+    const poolKey = (st) => (season.playoffByDivision ? (st.divisionId ?? "none") : "all");
+    const pools = new Map();
+    for (const st of seasonTeams) {
         const rec = agg.get(st.teamId) ?? emptyAgg();
         const maxWins = rec.wins + (remaining.get(st.teamId) ?? 0);
-        return { teamId: st.teamId, wins: rec.wins, maxWins };
-    });
+        const key = poolKey(st);
+        if (!pools.has(key))
+            pools.set(key, []);
+        pools.get(key).push({ teamId: st.teamId, wins: rec.wins, maxWins });
+    }
     const clinchStatus = new Map();
-    for (const t of pool) {
-        const couldPassCount = pool.filter((o) => o.teamId !== t.teamId && o.maxWins > t.wins).length;
-        const alreadyAheadCount = pool.filter((o) => o.teamId !== t.teamId && o.wins >= t.maxWins).length;
-        const clinched = couldPassCount < season.playoffTeamCount;
-        const eliminated = alreadyAheadCount >= season.playoffTeamCount;
-        clinchStatus.set(t.teamId, { clinched: clinched && !eliminated, eliminated });
+    for (const pool of pools.values()) {
+        for (const t of pool) {
+            const couldPassCount = pool.filter((o) => o.teamId !== t.teamId && o.maxWins > t.wins).length;
+            const alreadyAheadCount = pool.filter((o) => o.teamId !== t.teamId && o.wins >= t.maxWins).length;
+            const clinched = couldPassCount < season.playoffTeamCount;
+            const eliminated = alreadyAheadCount >= season.playoffTeamCount;
+            clinchStatus.set(t.teamId, { clinched: clinched && !eliminated, eliminated });
+        }
     }
     return divisions.map((division) => {
         const teams = seasonTeams
@@ -457,6 +464,39 @@ export async function getTeamsWithRecords(seasonId) {
         return [];
     const divisions = await getStandings(seasonId);
     return divisions.flatMap((d) => d.teams.map((t) => ({ ...t, division: d.name })));
+}
+export async function getAllAwards() {
+    const awards = await prisma.award.findMany({
+        orderBy: [{ season: { createdAt: "desc" } }, { createdAt: "desc" }],
+        include: { player: true, season: true },
+    });
+    const grouped = new Map();
+    for (const a of awards) {
+        const key = a.season ? a.season.id : "career";
+        if (!grouped.has(key)) {
+            grouped.set(key, { seasonName: a.season ? a.season.name : "Career Awards", awards: [] });
+        }
+        grouped.get(key).awards.push(a);
+    }
+    return Array.from(grouped.values());
+}
+export async function getGraduates() {
+    const players = await prisma.player.findMany({
+        where: { status: "RETIRED" },
+        include: {
+            team: true,
+            seasonStats: { where: { isPlayoffs: false } },
+            awards: { include: { season: true }, orderBy: { createdAt: "desc" } },
+        },
+        orderBy: { name: "asc" },
+    });
+    return players.map((p) => ({
+        slug: p.slug,
+        name: p.name,
+        team: p.team,
+        career: computeCareerTotals(p.seasonStats),
+        awards: p.awards,
+    }));
 }
 export async function getTeamDetail(shortCode, seasonId) {
     const team = await prisma.team.findUnique({ where: { shortCode } });

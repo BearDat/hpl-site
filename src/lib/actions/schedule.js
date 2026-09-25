@@ -64,10 +64,17 @@ export async function updateGame(gameId, formData) {
     const awayScoreRaw = formData.get("awayScore");
     const inningsRaw = formData.get("innings");
     const forfeitWinnerId = String(formData.get("forfeitWinnerId") ?? "") || null;
+    const homeTeamId = String(formData.get("homeTeamId") ?? "");
+    const awayTeamId = String(formData.get("awayTeamId") ?? "");
+    if (!homeTeamId || !awayTeamId || homeTeamId === awayTeamId) {
+        throw new Error("Home and away must be two different teams.");
+    }
     await prisma.game.update({
         where: { id: gameId },
         data: {
             status,
+            homeTeamId,
+            awayTeamId,
             homeScore: homeScoreRaw ? Number(homeScoreRaw) : null,
             awayScore: awayScoreRaw ? Number(awayScoreRaw) : null,
             innings: inningsRaw ? Number(inningsRaw) : null,

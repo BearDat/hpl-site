@@ -139,7 +139,7 @@ export default async function LeaguePage() {
 
           <Panel title="Playoff Format">
             <form action={updatePlayoffFormatForSeason} className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <Field label="Playoff teams">
+              <Field label={current.playoffByDivision ? "Playoff teams (per division)" : "Playoff teams (league-wide)"}>
                 <input type="number" name="playoffTeamCount" defaultValue={current.playoffTeamCount} className={inputClass}/>
               </Field>
               <Field label="Series lengths (comma-separated)">
@@ -148,6 +148,10 @@ export default async function LeaguePage() {
               <label className="flex items-end gap-2 pb-2">
                 <input type="checkbox" name="playoffReseed" defaultChecked={current.playoffReseed}/>
                 <span className="text-sm">Reseed each round</span>
+              </label>
+              <label className="flex items-end gap-2 pb-2">
+                <input type="checkbox" name="playoffByDivision" defaultChecked={current.playoffByDivision}/>
+                <span className="text-sm">Qualify top N from each division (instead of top N overall)</span>
               </label>
               <div className="col-span-2 sm:col-span-3">
                 <button type="submit" className={buttonClass}>

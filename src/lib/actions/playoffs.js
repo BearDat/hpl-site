@@ -50,14 +50,15 @@ export async function generateFirstRound(formData) {
     if (existing > 0)
         throw new Error("Round 1 series already exist for this season.");
     const divisions = await getStandings(seasonId);
-    const seeded = divisions
-        .flatMap((d) => d.teams)
-        .sort((a, b) => {
-        const pctA = a.wins + a.losses > 0 ? a.wins / (a.wins + a.losses) : 0;
-        const pctB = b.wins + b.losses > 0 ? b.wins / (b.wins + b.losses) : 0;
-        return pctB - pctA || b.wins - a.wins || a.name.localeCompare(b.name);
-    })
-        .slice(0, season.playoffTeamCount);
+    const pct = (t) => (t.wins + t.losses > 0 ? t.wins / (t.wins + t.losses) : 0);
+    const byRecord = (a, b) => pct(b) - pct(a) || b.wins - a.wins || a.name.localeCompare(b.name);
+    // Teams are already sorted by record within each division (see
+    // getStandings); when qualifying per-division we take each division's
+    // top N first, then rank those qualifiers overall for bracket seeding.
+    const qualifiers = season.playoffByDivision
+        ? divisions.flatMap((d) => d.teams.slice(0, season.playoffTeamCount))
+        : divisions.flatMap((d) => d.teams).sort(byRecord).slice(0, season.playoffTeamCount);
+    const seeded = [...qualifiers].sort(byRecord);
     if (seeded.length < 2)
         throw new Error("Not enough teams to generate a bracket.");
     const bestOf = season.playoffSeriesLengths[0] ?? 5;

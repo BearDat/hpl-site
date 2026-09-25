@@ -76,7 +76,7 @@ export default async function SchedulePage() {
               <div className="mb-1 text-xs font-extrabold tracking-wide opacity-55">
                 {round.toUpperCase()}
               </div>
-              {roundGames.map((game) => (<GameRow key={game.id} game={game}/>))}
+              {roundGames.map((game) => (<GameRow key={game.id} game={game} teams={teams}/>))}
             </div>)))}
       </Panel>
     </div>);

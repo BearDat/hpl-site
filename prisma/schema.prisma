@@ -39,6 +39,7 @@ model Season {
   name                 String
   isCurrent            Boolean  @default(false)
   playoffTeamCount     Int      @default(4)
+  playoffByDivision    Boolean  @default(false)
   playoffSeriesLengths Int[]    @default([3, 5, 7])
   playoffReseed        Boolean  @default(true)
   championTeamId       String?

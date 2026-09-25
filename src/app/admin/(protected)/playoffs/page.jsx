@@ -38,7 +38,8 @@ export default async function PlayoffsPage() {
     return (<div>
       <h1 className="mb-6 font-display text-2xl">Playoffs</h1>
       <p className="mb-6 text-sm opacity-60">
-        Managing the bracket for {season.name} — top {season.playoffTeamCount} teams,
+        Managing the bracket for {season.name} — top {season.playoffTeamCount}{" "}
+        {season.playoffByDivision ? "teams from each division" : "teams overall"},
         series lengths {season.playoffSeriesLengths.join(", ")}, reseeding{" "}
         {season.playoffReseed ? "on" : "off"} (set in League Management).
       </p>

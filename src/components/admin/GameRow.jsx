@@ -1,16 +1,20 @@
 import { updateGame, deleteGame } from "@/lib/actions/schedule";
 import { buttonClass, buttonSecondaryClass } from "./ui";
-export function GameRow({ game, }) {
+export function GameRow({ game, teams = [] }) {
     const updateWithId = updateGame.bind(null, game.id);
-    return (<div className="flex items-center gap-2 border-b border-ink/10 py-2 text-sm last:border-b-0">
+    return (<div className="flex flex-col gap-1 border-b border-ink/10 py-2 text-sm last:border-b-0">
+      <div className="text-xs opacity-55">
+        {game.scheduledTime ?? "—"} {game.locationCode ? `· ${game.locationCode}` : ""}
+      </div>
       <form action={updateWithId} className="grid flex-1 grid-cols-12 items-center gap-2">
-        <div className="col-span-3">
-          <div className="font-bold">
-            {game.awayTeam.shortCode} @ {game.homeTeam.shortCode}
-          </div>
-          <div className="text-xs opacity-55">
-            {game.scheduledTime ?? "—"} {game.locationCode ? `· ${game.locationCode}` : ""}
-          </div>
+        <div className="col-span-3 flex items-center gap-1">
+          <select name="awayTeamId" defaultValue={game.awayTeamId} className="w-full border border-ink/30 bg-surface px-1.5 py-1.5 text-xs font-bold">
+            {teams.map((t) => (<option key={t.id} value={t.id}>{t.shortCode}</option>))}
+          </select>
+          <span className="opacity-55">@</span>
+          <select name="homeTeamId" defaultValue={game.homeTeamId} className="w-full border border-ink/30 bg-surface px-1.5 py-1.5 text-xs font-bold">
+            {teams.map((t) => (<option key={t.id} value={t.id}>{t.shortCode}</option>))}
+          </select>
         </div>
         <select name="status" defaultValue={game.status} className="col-span-2 border border-ink/30 bg-surface px-2 py-1.5 text-xs">
           <option value="SCHEDULED">Scheduled</option>
