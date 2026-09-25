@@ -185,11 +185,15 @@ export async function addPlayoffGame(seriesId, formData) {
     revalidatePath("/playoffs");
 }
 export async function updatePlayoffGame(gameId, formData) {
-    const status = String(formData.get("status") ?? "SCHEDULED");
+    const submittedStatus = String(formData.get("status") ?? "SCHEDULED");
     const homeScoreRaw = formData.get("homeScore");
     const awayScoreRaw = formData.get("awayScore");
     const inningsRaw = formData.get("innings");
     const forfeitWinnerId = String(formData.get("forfeitWinnerId") ?? "") || null;
+    const hasBothScores = homeScoreRaw && awayScoreRaw;
+    // Entering both scores marks the game final on its own, unless the
+    // admin explicitly picked a different status (forfeit, postponed).
+    const status = submittedStatus === "SCHEDULED" && hasBothScores ? "FINAL" : submittedStatus;
     const game = await prisma.game.update({
         where: { id: gameId },
         data: {

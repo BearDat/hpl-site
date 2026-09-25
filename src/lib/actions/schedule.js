@@ -147,7 +147,7 @@ export async function commitBulkScheduleImport(formData) {
     redirect(`/admin/schedule?imported=${toCreate.length}&duplicates=${duplicateCount}`);
 }
 export async function updateGame(gameId, formData) {
-    const status = String(formData.get("status") ?? "SCHEDULED");
+    const submittedStatus = String(formData.get("status") ?? "SCHEDULED");
     const homeScoreRaw = formData.get("homeScore");
     const awayScoreRaw = formData.get("awayScore");
     const inningsRaw = formData.get("innings");
@@ -157,6 +157,10 @@ export async function updateGame(gameId, formData) {
     if (!homeTeamId || !awayTeamId || homeTeamId === awayTeamId) {
         throw new Error("Home and away must be two different teams.");
     }
+    const hasBothScores = homeScoreRaw && awayScoreRaw;
+    // Entering both scores marks the game final on its own, unless the
+    // admin explicitly picked a different status (forfeit, postponed).
+    const status = submittedStatus === "SCHEDULED" && hasBothScores ? "FINAL" : submittedStatus;
     await prisma.game.update({
         where: { id: gameId },
         data: {
