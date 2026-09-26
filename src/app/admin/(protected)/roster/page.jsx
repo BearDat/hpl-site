@@ -42,6 +42,17 @@ export default async function RosterPage(props) {
     ]);
     const freeAgents = players.filter((p) => !p.teamId);
     const activePlayers = players.filter((p) => p.teamId);
+    const playerGroups = [];
+    const playerGroupByKey = new Map();
+    for (const p of players) {
+        const key = p.teamId ?? "free-agents";
+        if (!playerGroupByKey.has(key)) {
+            const group = { key, label: p.team?.name ?? "Free Agents", players: [] };
+            playerGroupByKey.set(key, group);
+            playerGroups.push(group);
+        }
+        playerGroupByKey.get(key).players.push(p);
+    }
     const regularStatByPlayerId = new Map(seasonStats.filter((s) => !s.isPlayoffs).map((s) => [s.playerId, s]));
     const playoffStatByPlayerId = new Map(seasonStats.filter((s) => s.isPlayoffs).map((s) => [s.playerId, s]));
     return (<div>
@@ -186,15 +197,25 @@ export default async function RosterPage(props) {
         <TradeForm teams={teams} activePlayers={activePlayers}/>
       </Panel>
 
-      <Panel title="Players">
-        <div className="mb-2 hidden text-[10px] font-bold uppercase tracking-wide opacity-50 sm:grid sm:grid-cols-12 sm:gap-2">
-          <div className="col-span-3">Link</div>
-          <div className="col-span-3">Name</div>
-          <div className="col-span-2">Team</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-2">Roblox ID</div>
+      <Panel title={`Players (${players.length})`}>
+        <div className="flex flex-col gap-1">
+          {playerGroups.map((group) => (<details key={group.key} className="group border-b border-ink/10 py-2 last:border-b-0">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold">
+                {group.label} <span className="font-normal opacity-55">({group.players.length})</span>
+                <span className="ml-auto text-xs opacity-45 transition-transform group-open:rotate-180">▾</span>
+              </summary>
+              <div className="mt-2">
+                <div className="mb-2 hidden text-[10px] font-bold uppercase tracking-wide opacity-50 sm:grid sm:grid-cols-12 sm:gap-2">
+                  <div className="col-span-3">Link</div>
+                  <div className="col-span-3">Name</div>
+                  <div className="col-span-2">Team</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-2">Roblox ID</div>
+                </div>
+                {group.players.map((p) => (<PlayerRow key={p.id} player={p} teams={teams}/>))}
+              </div>
+            </details>))}
         </div>
-        {players.map((p) => (<PlayerRow key={p.id} player={p} teams={teams}/>))}
       </Panel>
 
       <Panel title="Merge Players">
@@ -227,25 +248,37 @@ export default async function RosterPage(props) {
       </Panel>
 
       {season && (<Panel title={`Season Stats — ${season.name}`}>
-          <p className="mb-3 text-xs opacity-55">Click a player to enter or edit their stats.</p>
+          <p className="mb-3 text-xs opacity-55">Click a team, then a player, to enter or edit their stats.</p>
           <div className="flex flex-col gap-1">
-            {players.map((p) => {
-                const reg = regularStatByPlayerId.get(p.id);
-                const po = playoffStatByPlayerId.get(p.id);
-                const hasAny = reg || po;
-                return (<details key={p.id} className="group border-b border-ink/10 py-2 last:border-b-0">
-                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm">
-                    <span className="font-bold">
-                      {p.name} <span className="font-normal opacity-55">— {p.team?.name ?? "Free Agent"}</span>
-                    </span>
-                    <span className="text-xs opacity-45">
-                      {hasAny ? "Stats entered" : "No stats yet"}{" "}
-                      <span className="inline-block transition-transform group-open:rotate-180">▾</span>
+            {playerGroups.map((group) => {
+                const statsEnteredCount = group.players.filter((p) => regularStatByPlayerId.has(p.id) || playoffStatByPlayerId.has(p.id)).length;
+                return (<details key={group.key} className="group border-b border-ink/10 py-2 last:border-b-0">
+                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold">
+                    {group.label} <span className="font-normal opacity-55">({group.players.length})</span>
+                    <span className="ml-auto flex items-center gap-2 text-xs font-normal opacity-45">
+                      {statsEnteredCount}/{group.players.length} entered
+                      <span className="transition-transform group-open:rotate-180">▾</span>
                     </span>
                   </summary>
-                  <div className="mt-3 pl-1">
-                    <SeasonStatsForm player={p} seasonId={season.id} stat={reg} isPlayoffs={false}/>
-                    <SeasonStatsForm player={p} seasonId={season.id} stat={po} isPlayoffs={true}/>
+                  <div className="mt-2 flex flex-col gap-1 pl-1">
+                    {group.players.map((p) => {
+                        const reg = regularStatByPlayerId.get(p.id);
+                        const po = playoffStatByPlayerId.get(p.id);
+                        const hasAny = reg || po;
+                        return (<details key={p.id} className="group/player border-b border-ink/10 py-2 last:border-b-0">
+                        <summary className="flex cursor-pointer list-none items-center justify-between text-sm">
+                          <span className="font-bold">{p.name}</span>
+                          <span className="text-xs opacity-45">
+                            {hasAny ? "Stats entered" : "No stats yet"}{" "}
+                            <span className="inline-block transition-transform group-open/player:rotate-180">▾</span>
+                          </span>
+                        </summary>
+                        <div className="mt-3 pl-1">
+                          <SeasonStatsForm player={p} seasonId={season.id} stat={reg} isPlayoffs={false}/>
+                          <SeasonStatsForm player={p} seasonId={season.id} stat={po} isPlayoffs={true}/>
+                        </div>
+                      </details>);
+                    })}
                   </div>
                 </details>);
             })}
