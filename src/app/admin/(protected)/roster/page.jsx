@@ -45,7 +45,7 @@ export default async function RosterPage(props) {
     const regularStatByPlayerId = new Map(seasonStats.filter((s) => !s.isPlayoffs).map((s) => [s.playerId, s]));
     const playoffStatByPlayerId = new Map(seasonStats.filter((s) => s.isPlayoffs).map((s) => [s.playerId, s]));
     return (<div>
-      <h1 className="mb-6 font-display text-2xl">Roster Management</h1>
+      <h1 className="mb-4 font-display text-xl">Roster Management</h1>
 
       {imported !== null && (<div className="mb-6 border border-ink/20 bg-paper p-3 text-sm">
           <span className="font-bold">{imported} player(s) imported.</span>

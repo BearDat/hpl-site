@@ -16,7 +16,7 @@ export default async function AwardsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-2xl">Awards</h1>
+      <h1 className="mb-4 font-display text-xl">Awards</h1>
 
       <Panel title="Grant Award">
         <form action={addAward} className="grid grid-cols-2 gap-4 sm:grid-cols-4">

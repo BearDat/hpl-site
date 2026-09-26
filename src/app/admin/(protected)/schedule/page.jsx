@@ -56,8 +56,8 @@ export default async function SchedulePage(props) {
         }
     }
     return (<div>
-      <h1 className="mb-6 font-display text-2xl">Schedule &amp; Scores</h1>
-      <p className="mb-6 text-sm opacity-60">Managing games for {season.name}.</p>
+      <h1 className="mb-4 font-display text-xl">Schedule &amp; Scores</h1>
+      <p className="mb-4 text-sm opacity-60">Managing games for {season.name}.</p>
 
       {imported !== null && (<div className="mb-6 border border-ink/20 bg-paper p-3 text-sm">
           <span className="font-bold">{imported} game(s) imported.</span>

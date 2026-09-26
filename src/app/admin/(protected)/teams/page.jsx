@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function TeamsPage() {
     const teams = await prisma.team.findMany({ orderBy: { name: "asc" } });
     return (<div>
-      <h1 className="mb-6 font-display text-2xl">Team Management</h1>
+      <h1 className="mb-4 font-display text-xl">Team Management</h1>
 
       <Panel title="Create a Team">
         <form action={createTeam} encType="multipart/form-data" className="grid grid-cols-2 gap-4 sm:grid-cols-5">

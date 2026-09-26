@@ -16,12 +16,12 @@ export default async function NewsPage() {
             orderBy: { rank: "asc" },
             include: { player: { include: { team: true } } },
         }),
-        prisma.player.findMany({ orderBy: { name: "asc" } }),
+        prisma.player.findMany({ orderBy: { name: "asc" }, include: { team: true } }),
     ]);
     const rankedPlayerIds = new Set(prospects.map((p) => p.playerId));
     const unrankedPlayers = players.filter((p) => !rankedPlayerIds.has(p.id));
     return (<div>
-      <h1 className="mb-6 font-display text-2xl">News &amp; Media Management</h1>
+      <h1 className="mb-4 font-display text-xl">News &amp; Media Management</h1>
 
       <Panel title="Create Article">
         <form action={createArticle} encType="multipart/form-data" className="flex flex-col gap-3">
@@ -139,10 +139,10 @@ export default async function NewsPage() {
         </div>
         <form action={addProspect} className="flex items-end gap-3">
           <input type="hidden" name="rank" value={prospects.length + 1}/>
-          <Field label="Add player to bottom of pipeline">
+          <Field label="Add player to bottom of pipeline (free agents included)">
             <select name="playerId" required className={inputClass}>
               {unrankedPlayers.map((p) => (<option key={p.id} value={p.id}>
-                  {p.name}
+                  {p.name} — {p.team?.name ?? "Free Agent"}
                 </option>))}
             </select>
           </Field>

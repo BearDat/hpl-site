@@ -22,7 +22,7 @@ export default async function LeaguePage() {
         ? updatePlayoffFormat.bind(null, current.id)
         : null;
     return (<div>
-      <h1 className="mb-6 font-display text-2xl">League Management</h1>
+      <h1 className="mb-4 font-display text-xl">League Management</h1>
 
       <Panel title="Seasons">
         <div className="mb-4 flex flex-col gap-2">
