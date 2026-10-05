@@ -18,6 +18,7 @@ model Team {
   primaryColor  String
   secondaryColor String?
   logoUrl       String?
+  managerName   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

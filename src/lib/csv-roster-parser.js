@@ -32,9 +32,9 @@ function parseCsvLine(line) {
  * Parses roster sheets shaped like a wide export: teams laid out side by
  * side in blocks of two columns each (a slot label, a player name), with a
  * "Team,<name>" header row starting each team and a "Roster Cap: x/y" row
- * closing the block. A "PM" slot (team manager) is skipped, not imported
- * as a player. Handles any number of teams per row and any number of
- * stacked blocks.
+ * closing the block. A "PM" slot (team manager) is captured separately as
+ * `pm`, not imported as a player. Handles any number of teams per row and
+ * any number of stacked blocks.
  */
 export function parseRosterCsv(text) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
@@ -53,7 +53,7 @@ export function parseRosterCsv(text) {
         const label = cells[i];
         const value = cells[i + 1];
         if (label.toLowerCase() === "team" && value) {
-          const entry = { csvName: value, players: [] };
+          const entry = { csvName: value, pm: null, players: [] };
           teams.push(entry);
           currentBlock.push(entry);
         } else {
@@ -75,10 +75,14 @@ export function parseRosterCsv(text) {
       const value = cells[i + 1];
       const team = currentBlock[i / 2];
       if (!team || !value) continue;
-      if (!label || label.toLowerCase() === "pm") continue;
+      if (!label) continue;
+      if (label.toLowerCase() === "pm") {
+        team.pm = value;
+        continue;
+      }
       team.players.push(value);
     }
   }
 
-  return teams.filter((t) => t.players.length > 0);
+  return teams.filter((t) => t.players.length > 0 || t.pm);
 }

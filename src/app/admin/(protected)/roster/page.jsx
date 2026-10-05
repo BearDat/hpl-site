@@ -103,6 +103,7 @@ export default async function RosterPage(props) {
                   <span className="min-w-0 flex-1 font-bold">{t.csvName}</span>
                   <span className="text-xs opacity-55">
                     {t.players.length} players &middot; {matchedCount} matched to Roblox
+                    {t.pm && <> &middot; PM: {t.pm}</>}
                   </span>
                   <select name={`teamId_${i}`} defaultValue={findMatchingTeamId(t.csvName, teams)} className={`${inputClass} !w-56`}>
                     <option value="">Skip this team</option>

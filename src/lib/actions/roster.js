@@ -184,6 +184,7 @@ export async function previewRosterImport(formData) {
     const robloxIds = await resolveRobloxIds(allNames);
     const teams = parsedTeams.map((t) => ({
         csvName: t.csvName,
+        pm: t.pm ?? null,
         players: t.players.map((name) => ({
             name,
             robloxId: robloxIds.get(name.toLowerCase())?.id ?? null,
@@ -277,6 +278,12 @@ export async function commitRosterImport(formData) {
     }
     if (updates.length > 0) {
         await prisma.$transaction(updates);
+    }
+    const managerUpdates = selections
+        .filter((s) => s.team.pm)
+        .map((s) => prisma.team.update({ where: { id: s.teamId }, data: { managerName: s.team.pm } }));
+    if (managerUpdates.length > 0) {
+        await prisma.$transaction(managerUpdates);
     }
     await prisma.pendingRosterImport.delete({ where: { id: importId } });
     revalidatePath("/admin/roster");

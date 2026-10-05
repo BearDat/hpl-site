@@ -23,6 +23,9 @@ export default async function TeamDetailPage(props) {
           <TeamCrest color={team.primaryColor} logoUrl={team.logoUrl} className="h-16 w-14 flex-shrink-0" />
           <div>
             <div className="font-display text-3xl">{team.name}</div>
+            {team.managerName && (
+              <div className="mt-1 text-sm opacity-70">Team Manager: {team.managerName}</div>
+            )}
             {record && (
               <div className="mt-1 text-sm font-bold uppercase tracking-wide opacity-60">
                 {record.wins}-{record.losses} &middot; {record.division}

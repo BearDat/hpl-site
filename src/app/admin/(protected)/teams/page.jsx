@@ -25,6 +25,9 @@ export default async function TeamsPage() {
           <Field label="Logo">
             <input type="file" name="logo" accept="image/*" className="text-xs"/>
           </Field>
+          <Field label="Team manager">
+            <input name="managerName" placeholder="Roblox username" className={inputClass}/>
+          </Field>
           <div className="col-span-2 flex items-end sm:col-span-5">
             <button type="submit" className={buttonClass}>
               Create Team

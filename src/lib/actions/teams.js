@@ -14,11 +14,16 @@ export async function createTeam(formData) {
     const shortCode = String(formData.get("shortCode") ?? "").trim().toUpperCase();
     const primaryColor = String(formData.get("primaryColor") ?? "#101B45");
     const secondaryColor = String(formData.get("secondaryColor") ?? "") || undefined;
+    const managerName = String(formData.get("managerName") ?? "").trim() || undefined;
     if (!name || !shortCode)
         throw new Error("Name and short code are required.");
+    const existing = await prisma.team.findUnique({ where: { shortCode } });
+    if (existing) {
+        throw new Error(`"${shortCode}" is already used by ${existing.name}. Short codes must be unique — pick a different one.`);
+    }
     const logoUrl = await logoUrlFromForm(formData);
     await prisma.team.create({
-        data: { name, shortCode, primaryColor, secondaryColor, logoUrl },
+        data: { name, shortCode, primaryColor, secondaryColor, managerName, logoUrl },
     });
     revalidatePath("/admin/teams");
     revalidatePath("/");
@@ -28,12 +33,17 @@ export async function updateTeam(teamId, formData) {
     const shortCode = String(formData.get("shortCode") ?? "").trim().toUpperCase();
     const primaryColor = String(formData.get("primaryColor") ?? "#101B45");
     const secondaryColor = String(formData.get("secondaryColor") ?? "") || null;
+    const managerName = String(formData.get("managerName") ?? "").trim() || null;
     if (!name || !shortCode)
         throw new Error("Name and short code are required.");
+    const existing = await prisma.team.findUnique({ where: { shortCode } });
+    if (existing && existing.id !== teamId) {
+        throw new Error(`"${shortCode}" is already used by ${existing.name}. Short codes must be unique — pick a different one.`);
+    }
     const logoUrl = await logoUrlFromForm(formData);
     await prisma.team.update({
         where: { id: teamId },
-        data: { name, shortCode, primaryColor, secondaryColor, ...(logoUrl ? { logoUrl } : {}) },
+        data: { name, shortCode, primaryColor, secondaryColor, managerName, ...(logoUrl ? { logoUrl } : {}) },
     });
     revalidatePath("/admin/teams");
     revalidatePath("/");

@@ -7,11 +7,12 @@ export function TeamRow({ team }) {
         // Arbitrary user-uploaded dimensions; skip the built-in image optimizer.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={team.logoUrl} alt={team.name} className="h-8 w-8 flex-shrink-0 object-contain"/>) : (<div className="h-8 w-8 flex-shrink-0" style={{ background: team.primaryColor }}/>)}
-      <form action={updateWithId} encType="multipart/form-data" className="grid flex-1 grid-cols-2 items-center gap-2 sm:grid-cols-7">
+      <form action={updateWithId} encType="multipart/form-data" className="grid flex-1 grid-cols-2 items-center gap-2 sm:grid-cols-8">
         <input name="name" defaultValue={team.name} className={`${inputClass} sm:col-span-2`}/>
         <input name="shortCode" defaultValue={team.shortCode} className={inputClass}/>
         <input type="color" name="primaryColor" defaultValue={team.primaryColor} className="h-8 w-full border border-ink/30"/>
         <input type="color" name="secondaryColor" defaultValue={team.secondaryColor ?? "#ffffff"} className="h-8 w-full border border-ink/30"/>
+        <input name="managerName" defaultValue={team.managerName ?? ""} placeholder="Manager" className={inputClass}/>
         <input type="file" name="logo" accept="image/*" className="text-xs sm:col-span-1"/>
         <button type="submit" className={`${buttonClass} !text-[10px]`}>
           Save
