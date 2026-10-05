@@ -1,18 +1,27 @@
-import { mkdir, writeFile } from "fs/promises";
+import { getStore } from "@netlify/blobs";
 import path from "path";
 import { randomUUID } from "crypto";
+
+function uploadsStore() {
+  return getStore("uploads");
+}
+
 /**
- * Saves an uploaded File into public/uploads/<subdir>/ and returns the
- * public URL path to it. Local-filesystem storage: fine for development
- * and single-instance hosting, but won't persist on stateless/serverless
- * deployments — swap for S3/Supabase Storage/etc. before shipping there.
+ * Saves an uploaded File into Netlify Blobs and returns a URL that serves
+ * it back out (via the route handler at src/app/uploads/[...path]/route.js).
+ * Writing to the local filesystem would work in dev but not on Netlify's
+ * serverless functions, which are read-only at runtime.
  */
 export async function saveUploadedFile(file, subdir) {
-    const bytes = Buffer.from(await file.arrayBuffer());
-    const ext = path.extname(file.name) || "";
-    const filename = `${randomUUID()}${ext}`;
-    const dir = path.join(process.cwd(), "public", "uploads", subdir);
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, filename), bytes);
-    return `/uploads/${subdir}/${filename}`;
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const ext = path.extname(file.name) || "";
+  const key = `${subdir}/${randomUUID()}${ext}`;
+  await uploadsStore().set(key, bytes, {
+    metadata: { contentType: file.type || "application/octet-stream" },
+  });
+  return `/uploads/${key}`;
+}
+
+export async function getUploadedFile(key) {
+  return uploadsStore().getWithMetadata(key, { type: "arrayBuffer" });
 }

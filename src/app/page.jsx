@@ -56,13 +56,21 @@ export default async function Home() {
           <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">RECENT TRANSACTIONS</div>
           <div className="grid grid-cols-1 gap-x-10 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
             {transactions.map((t) => (
-              <div key={t.id} className="flex items-center gap-2 text-sm">
+              <div key={t.id} className="flex items-start gap-2 text-sm">
                 <span className="flex-shrink-0 text-xs font-extrabold text-accent">
                   {TRANSACTION_LABEL[t.type] ?? t.type}
                 </span>
-                <span className="min-w-0 truncate opacity-80">
-                  {t.assets.map((a) => a.player.name).join(", ")}
-                </span>
+                <div className="min-w-0">
+                  {t.assets.map((a) => (
+                    <div key={a.id} className="truncate opacity-80">
+                      {a.player.name}
+                      <span className="opacity-60">
+                        {" "}
+                        ({a.fromTeam?.shortCode ?? "FA"} &rarr; {a.toTeam?.shortCode ?? "FA"})
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>

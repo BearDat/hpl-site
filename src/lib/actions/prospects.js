@@ -16,6 +16,7 @@ export async function addProspect(formData) {
     ]);
     revalidatePath("/admin/news");
     revalidatePath("/");
+    revalidatePath("/pipeline");
 }
 export async function updateProspectRank(prospectRankId, formData) {
     const newRank = Number(formData.get("rank") ?? 0);
@@ -67,4 +68,5 @@ export async function removeProspect(formData) {
     await prisma.prospectRank.delete({ where: { id: prospectRankId } });
     revalidatePath("/admin/news");
     revalidatePath("/");
+    revalidatePath("/pipeline");
 }

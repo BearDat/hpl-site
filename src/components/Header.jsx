@@ -9,6 +9,8 @@ const NAV_LINKS = [
     { href: "/leaders", label: "Leaders" },
     { href: "/pipeline", label: "Pipeline" },
     { href: "/teams", label: "Teams" },
+    { href: "/awards", label: "Awards" },
+    { href: "/graduates", label: "Graduates" },
     { href: "/history", label: "History" },
 ];
 export function Header() {

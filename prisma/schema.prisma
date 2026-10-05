@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -38,6 +39,7 @@ model Season {
   name                 String
   isCurrent            Boolean  @default(false)
   playoffTeamCount     Int      @default(4)
+  playoffByDivision    Boolean  @default(false)
   playoffSeriesLengths Int[]    @default([3, 5, 7])
   playoffReseed        Boolean  @default(true)
   championTeamId       String?
@@ -324,6 +326,15 @@ model Session {
 // which real Team each CSV team funnels into. Deleted once confirmed.
 model PendingRosterImport {
   id        String   @id @default(cuid())
+  data      Json
+  createdAt DateTime @default(now())
+}
+
+// Holds a parsed-but-unconfirmed bulk schedule paste while the admin picks
+// which real Team each unrecognized name maps to. Deleted once confirmed.
+model PendingScheduleImport {
+  id        String   @id @default(cuid())
+  seasonId  String
   data      Json
   createdAt DateTime @default(now())
 }

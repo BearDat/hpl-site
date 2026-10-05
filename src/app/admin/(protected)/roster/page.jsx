@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentSeason } from "@/lib/queries";
-import { createPlayer, signPlayer, releasePlayer, tradePlayers, mergePlayers, previewRosterImport, cancelRosterImport, commitRosterImport, } from "@/lib/actions/roster";
+import { createPlayer, signPlayer, releasePlayer, mergePlayers, previewRosterImport, cancelRosterImport, commitRosterImport, } from "@/lib/actions/roster";
 import { Panel, Field, inputClass, buttonClass, buttonSecondaryClass } from "@/components/admin/ui";
 import { PlayerRow } from "@/components/admin/PlayerRow";
 import { SeasonStatsForm } from "@/components/admin/SeasonStatsForm";
+import { TradeForm } from "@/components/admin/TradeForm";
 export const dynamic = "force-dynamic";
 function findMatchingTeamId(csvName, teams) {
     const norm = (s) => s.trim().toLowerCase();
@@ -15,6 +16,7 @@ function findMatchingTeamId(csvName, teams) {
 export default async function RosterPage(props) {
     const searchParams = await props.searchParams;
     const importId = String(searchParams?.importId ?? "");
+    const imported = searchParams?.imported != null ? Number(searchParams.imported) : null;
     const season = await getCurrentSeason();
     const [teams, players, transactions, seasonStats, pendingImport] = await Promise.all([
         prisma.team.findMany({ orderBy: { name: "asc" } }),
@@ -40,10 +42,25 @@ export default async function RosterPage(props) {
     ]);
     const freeAgents = players.filter((p) => !p.teamId);
     const activePlayers = players.filter((p) => p.teamId);
+    const playerGroups = [];
+    const playerGroupByKey = new Map();
+    for (const p of players) {
+        const key = p.teamId ?? "free-agents";
+        if (!playerGroupByKey.has(key)) {
+            const group = { key, label: p.team?.name ?? "Free Agents", players: [] };
+            playerGroupByKey.set(key, group);
+            playerGroups.push(group);
+        }
+        playerGroupByKey.get(key).players.push(p);
+    }
     const regularStatByPlayerId = new Map(seasonStats.filter((s) => !s.isPlayoffs).map((s) => [s.playerId, s]));
     const playoffStatByPlayerId = new Map(seasonStats.filter((s) => s.isPlayoffs).map((s) => [s.playerId, s]));
     return (<div>
-      <h1 className="mb-6 font-display text-2xl">Roster Management</h1>
+      <h1 className="mb-4 font-display text-xl">Roster Management</h1>
+
+      {imported !== null && (<div className="mb-6 border border-ink/20 bg-paper p-3 text-sm">
+          <span className="font-bold">{imported} player(s) imported.</span>
+        </div>)}
 
       <Panel title="Add Player">
         <form action={createPlayer} className="grid grid-cols-2 gap-4 sm:grid-cols-5">
@@ -73,15 +90,20 @@ export default async function RosterPage(props) {
           <p className="mb-4 text-sm opacity-60">
             Found {pendingImport.data.teams.length} team(s) in the CSV. Pick which of your
             teams each one should import into, or leave it as &quot;Skip&quot; to not
-            import that group. Players already in the roster are matched by name and just
-            get moved to the new team; everyone else is created fresh.
+            import that group. Players are matched to an existing Player by Roblox ID when
+            one was resolved (so a username change won&apos;t create a duplicate), or by name
+            otherwise; everyone else is created fresh.
           </p>
           <form action={commitRosterImport} className="flex flex-col gap-4">
             <input type="hidden" name="importId" value={pendingImport.id}/>
-            {pendingImport.data.teams.map((t, i) => (<div key={i} className="border-b border-ink/10 pb-4 last:border-b-0">
+            {pendingImport.data.teams.map((t, i) => {
+            const matchedCount = t.players.filter((p) => p.robloxId).length;
+            return (<div key={i} className="border-b border-ink/10 pb-4 last:border-b-0">
                 <div className="mb-2 flex flex-wrap items-center gap-3">
                   <span className="min-w-0 flex-1 font-bold">{t.csvName}</span>
-                  <span className="text-xs opacity-55">{t.players.length} players</span>
+                  <span className="text-xs opacity-55">
+                    {t.players.length} players &middot; {matchedCount} matched to Roblox
+                  </span>
                   <select name={`teamId_${i}`} defaultValue={findMatchingTeamId(t.csvName, teams)} className={`${inputClass} !w-56`}>
                     <option value="">Skip this team</option>
                     {teams.map((team) => (<option key={team.id} value={team.id}>
@@ -89,8 +111,14 @@ export default async function RosterPage(props) {
                       </option>))}
                   </select>
                 </div>
-                <div className="text-xs opacity-60">{t.players.join(", ")}</div>
-              </div>))}
+                <div className="text-xs opacity-60">
+                  {t.players.map((p, idx) => (<span key={p.name}>
+                      {idx > 0 && ", "}
+                      <span className={p.robloxId ? undefined : "text-[#c1391f]"}>{p.name}</span>
+                    </span>))}
+                </div>
+              </div>);
+        })}
             <div className="flex gap-3">
               <button type="submit" className={buttonClass}>
                 Import Rosters
@@ -166,69 +194,28 @@ export default async function RosterPage(props) {
       </Panel>
 
       <Panel title="Trade">
-        <form action={tradePlayers} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <Field label="Team A">
-              <select name="teamAId" required className={inputClass}>
-                {teams.map((t) => (<option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>))}
-              </select>
-            </Field>
-            <div className="mt-3">
-              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide opacity-60">
-                Players leaving Team A
-              </span>
-              <div className="flex max-h-40 flex-col gap-1 overflow-y-auto border border-ink/30 bg-surface p-2">
-                {activePlayers.map((p) => (<label key={p.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="teamAPlayers" value={p.id}/>
-                    {p.name} <span className="opacity-55">— {p.team?.name}</span>
-                  </label>))}
-              </div>
-            </div>
-          </div>
-          <div>
-            <Field label="Team B">
-              <select name="teamBId" required className={inputClass}>
-                {teams.map((t) => (<option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>))}
-              </select>
-            </Field>
-            <div className="mt-3">
-              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide opacity-60">
-                Players leaving Team B
-              </span>
-              <div className="flex max-h-40 flex-col gap-1 overflow-y-auto border border-ink/30 bg-surface p-2">
-                {activePlayers.map((p) => (<label key={p.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="teamBPlayers" value={p.id}/>
-                    {p.name} <span className="opacity-55">— {p.team?.name}</span>
-                  </label>))}
-              </div>
-            </div>
-          </div>
-          <div className="sm:col-span-2">
-            <Field label="Notes">
-              <input name="notes" className={inputClass}/>
-            </Field>
-          </div>
-          <div className="sm:col-span-2">
-            <button type="submit" className={buttonClass}>
-              Execute Trade
-            </button>
-          </div>
-        </form>
+        <TradeForm teams={teams} activePlayers={activePlayers}/>
       </Panel>
 
-      <Panel title="Players">
-        <div className="mb-2 hidden text-[10px] font-bold uppercase tracking-wide opacity-50 sm:grid sm:grid-cols-12 sm:gap-2">
-          <div className="col-span-3">Link</div>
-          <div className="col-span-3">Name</div>
-          <div className="col-span-2">Team</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-2">Roblox ID</div>
+      <Panel title={`Players (${players.length})`}>
+        <div className="flex flex-col gap-1">
+          {playerGroups.map((group) => (<details key={group.key} className="group border-b border-ink/10 py-2 last:border-b-0">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold">
+                {group.label} <span className="font-normal opacity-55">({group.players.length})</span>
+                <span className="ml-auto text-xs opacity-45 transition-transform group-open:rotate-180">▾</span>
+              </summary>
+              <div className="mt-2">
+                <div className="mb-2 hidden text-[10px] font-bold uppercase tracking-wide opacity-50 sm:grid sm:grid-cols-12 sm:gap-2">
+                  <div className="col-span-3">Link</div>
+                  <div className="col-span-3">Name</div>
+                  <div className="col-span-2">Team</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-2">Roblox ID</div>
+                </div>
+                {group.players.map((p) => (<PlayerRow key={p.id} player={p} teams={teams}/>))}
+              </div>
+            </details>))}
         </div>
-        {players.map((p) => (<PlayerRow key={p.id} player={p} teams={teams}/>))}
       </Panel>
 
       <Panel title="Merge Players">
@@ -261,25 +248,37 @@ export default async function RosterPage(props) {
       </Panel>
 
       {season && (<Panel title={`Season Stats — ${season.name}`}>
-          <p className="mb-3 text-xs opacity-55">Click a player to enter or edit their stats.</p>
+          <p className="mb-3 text-xs opacity-55">Click a team, then a player, to enter or edit their stats.</p>
           <div className="flex flex-col gap-1">
-            {players.map((p) => {
-                const reg = regularStatByPlayerId.get(p.id);
-                const po = playoffStatByPlayerId.get(p.id);
-                const hasAny = reg || po;
-                return (<details key={p.id} className="group border-b border-ink/10 py-2 last:border-b-0">
-                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm">
-                    <span className="font-bold">
-                      {p.name} <span className="font-normal opacity-55">— {p.team?.name ?? "Free Agent"}</span>
-                    </span>
-                    <span className="text-xs opacity-45">
-                      {hasAny ? "Stats entered" : "No stats yet"}{" "}
-                      <span className="inline-block transition-transform group-open:rotate-180">▾</span>
+            {playerGroups.map((group) => {
+                const statsEnteredCount = group.players.filter((p) => regularStatByPlayerId.has(p.id) || playoffStatByPlayerId.has(p.id)).length;
+                return (<details key={group.key} className="group border-b border-ink/10 py-2 last:border-b-0">
+                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-bold">
+                    {group.label} <span className="font-normal opacity-55">({group.players.length})</span>
+                    <span className="ml-auto flex items-center gap-2 text-xs font-normal opacity-45">
+                      {statsEnteredCount}/{group.players.length} entered
+                      <span className="transition-transform group-open:rotate-180">▾</span>
                     </span>
                   </summary>
-                  <div className="mt-3 pl-1">
-                    <SeasonStatsForm player={p} seasonId={season.id} stat={reg} isPlayoffs={false}/>
-                    <SeasonStatsForm player={p} seasonId={season.id} stat={po} isPlayoffs={true}/>
+                  <div className="mt-2 flex flex-col gap-1 pl-1">
+                    {group.players.map((p) => {
+                        const reg = regularStatByPlayerId.get(p.id);
+                        const po = playoffStatByPlayerId.get(p.id);
+                        const hasAny = reg || po;
+                        return (<details key={p.id} className="group/player border-b border-ink/10 py-2 last:border-b-0">
+                        <summary className="flex cursor-pointer list-none items-center justify-between text-sm">
+                          <span className="font-bold">{p.name}</span>
+                          <span className="text-xs opacity-45">
+                            {hasAny ? "Stats entered" : "No stats yet"}{" "}
+                            <span className="inline-block transition-transform group-open/player:rotate-180">▾</span>
+                          </span>
+                        </summary>
+                        <div className="mt-3 pl-1">
+                          <SeasonStatsForm player={p} seasonId={season.id} stat={reg} isPlayoffs={false}/>
+                          <SeasonStatsForm player={p} seasonId={season.id} stat={po} isPlayoffs={true}/>
+                        </div>
+                      </details>);
+                    })}
                   </div>
                 </details>);
             })}

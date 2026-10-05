@@ -31,6 +31,7 @@ export async function setSeasonChampion(seasonId, formData) {
 }
 export async function updatePlayoffFormat(seasonId, formData) {
     const playoffTeamCount = Number(formData.get("playoffTeamCount") ?? 4);
+    const playoffByDivision = formData.get("playoffByDivision") === "on";
     const seriesLengthsRaw = String(formData.get("playoffSeriesLengths") ?? "3,5,7");
     const playoffSeriesLengths = seriesLengthsRaw
         .split(",")
@@ -39,9 +40,11 @@ export async function updatePlayoffFormat(seasonId, formData) {
     const playoffReseed = formData.get("playoffReseed") === "on";
     await prisma.season.update({
         where: { id: seasonId },
-        data: { playoffTeamCount, playoffSeriesLengths, playoffReseed },
+        data: { playoffTeamCount, playoffByDivision, playoffSeriesLengths, playoffReseed },
     });
     revalidatePath("/admin/league");
+    revalidatePath("/admin/playoffs");
+    revalidatePath("/standings");
 }
 export async function createDivision(formData) {
     const seasonId = String(formData.get("seasonId") ?? "");

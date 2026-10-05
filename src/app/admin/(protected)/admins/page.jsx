@@ -10,7 +10,7 @@ export default async function AdminsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-2xl">Admin Management</h1>
+      <h1 className="mb-4 font-display text-xl">Admin Management</h1>
 
       <Panel title="Admins">
         <div className="mb-4 flex flex-col gap-2">
