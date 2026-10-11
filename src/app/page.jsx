@@ -44,7 +44,7 @@ export default async function Home() {
     <div className="flex flex-1 flex-col">
       <Header />
       <ScoresRibbon games={games} />
-      <main className="grid grid-cols-1 gap-5 px-14 py-10 sm:grid-cols-2 lg:grid-cols-[2fr_1.3fr_1fr_1fr]">
+      <main className="grid grid-cols-1 gap-5 px-4 sm:px-8 lg:px-14 py-10 sm:grid-cols-2 lg:grid-cols-[2fr_1.3fr_1fr_1fr]">
         <NewsCard article={news.top} />
         <PipelineCard entries={pipeline} />
         <StandingsCard divisions={standings} />
@@ -52,7 +52,7 @@ export default async function Home() {
       </main>
 
       {transactions.length > 0 && (
-        <div className="border-t border-ink/15 px-14 py-8">
+        <div className="border-t border-ink/15 px-4 sm:px-8 lg:px-14 py-8">
           <div className="mb-4 text-xs font-extrabold tracking-wide opacity-55">RECENT TRANSACTIONS</div>
           <div className="grid grid-cols-1 gap-x-10 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
             {transactions.map((t) => (
@@ -64,6 +64,7 @@ export default async function Home() {
                   {t.assets.map((a) => (
                     <div key={a.id} className="truncate opacity-80">
                       {a.player.name}
+                      {a.player.noPitchCatch && <span className="ml-1 text-[10px] font-extrabold text-accent-warm">NP/C</span>}
                       <span className="opacity-60">
                         {" "}
                         ({a.fromTeam?.shortCode ?? "FA"} &rarr; {a.toTeam?.shortCode ?? "FA"})
@@ -78,7 +79,7 @@ export default async function Home() {
       )}
 
       {playoffsStarted && (
-        <div className="border-t border-ink/15 px-14 py-10">
+        <div className="border-t border-ink/15 px-4 sm:px-8 lg:px-14 py-10">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="font-display text-xl">PLAYOFF BRACKET</h2>
             <Link href="/playoffs" className="text-xs font-bold text-accent hover:underline">

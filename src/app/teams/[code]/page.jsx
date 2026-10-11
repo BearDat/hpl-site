@@ -18,7 +18,7 @@ export default async function TeamDetailPage(props) {
   return (
     <div className="flex flex-1 flex-col">
       <Header />
-      <main className="flex-1 px-14 py-10">
+      <main className="flex-1 px-4 sm:px-8 lg:px-14 py-10">
         <div className="mb-8 flex flex-wrap items-center gap-6 border-[3px] border-ink p-6" style={{ borderColor: team.primaryColor }}>
           <TeamCrest color={team.primaryColor} logoUrl={team.logoUrl} className="h-16 w-14 flex-shrink-0" />
           <div>
@@ -46,6 +46,7 @@ export default async function TeamDetailPage(props) {
                 {players.map((p) => (
                   <Link key={p.id} href={`/players/${p.slug}`} className="border-b border-ink/10 py-1.5 text-sm hover:text-accent">
                     {p.name}
+                    {p.noPitchCatch && <span className="ml-1.5 text-[10px] font-extrabold text-accent-warm">NP/C</span>}
                   </Link>
                 ))}
               </div>

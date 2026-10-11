@@ -41,7 +41,12 @@ export async function previewBulkImportGames(seasonId, formData) {
         throw new Error("Couldn't find any rounds in that text.");
     }
     const teams = await prisma.team.findMany();
-    const findTeam = (name) => teams.find((t) => t.name.toLowerCase() === name.toLowerCase());
+    const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const findTeam = (name) => {
+        const target = norm(name);
+        return (teams.find((t) => norm(t.name) === target) ??
+            teams.find((t) => target.includes(norm(t.name)) || norm(t.name).includes(target)));
+    };
     const unmatchedNames = new Set();
     const preppedRounds = rounds.map((round) => ({
         round: round.round,
@@ -59,6 +64,7 @@ export async function previewBulkImportGames(seasonId, formData) {
                 homeTeamId: home?.id ?? null,
                 awayTeamId: away?.id ?? null,
                 location: game.location ?? null,
+                scheduledTime: game.scheduledTime ?? null,
             };
         }),
     }));
@@ -78,7 +84,7 @@ export async function previewBulkImportGames(seasonId, formData) {
                 toCreate.push({
                     seasonId,
                     round: round.round,
-                    scheduledTime: round.scheduledTime ?? undefined,
+                    scheduledTime: game.scheduledTime ?? round.scheduledTime ?? undefined,
                     locationCode: game.location ?? undefined,
                     homeTeamId: game.homeTeamId,
                     awayTeamId: game.awayTeamId,
@@ -131,7 +137,7 @@ export async function commitBulkScheduleImport(formData) {
             toCreate.push({
                 seasonId: pending.seasonId,
                 round: round.round,
-                scheduledTime: round.scheduledTime ?? undefined,
+                scheduledTime: game.scheduledTime ?? round.scheduledTime ?? undefined,
                 locationCode: game.location ?? undefined,
                 homeTeamId,
                 awayTeamId,

@@ -10,7 +10,7 @@ const LINKS = [
 
 export function Footer() {
   return (
-    <footer className="flex flex-wrap items-center justify-between gap-4 border-t-[3px] border-ink px-14 py-6 text-xs font-semibold tracking-wider">
+    <footer className="flex flex-wrap items-center justify-between gap-4 border-t-[3px] border-ink px-4 sm:px-8 lg:px-14 py-6 text-xs font-semibold tracking-wider">
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 flex-shrink-0" style={{ background: "var(--color-accent)" }} />
         <span className="opacity-70">&copy; HCBB Pathway</span>

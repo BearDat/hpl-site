@@ -25,6 +25,7 @@ export function TradeForm({ teams, activePlayers }) {
             {teamAPlayers.map((p) => (<label key={p.id} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="teamAPlayers" value={p.id}/>
                 {p.name}
+                {p.noPitchCatch && <span className="text-[10px] font-extrabold text-accent-warm">NP/C</span>}
               </label>))}
           </div>
         </div>
@@ -46,6 +47,7 @@ export function TradeForm({ teams, activePlayers }) {
             {teamBPlayers.map((p) => (<label key={p.id} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="teamBPlayers" value={p.id}/>
                 {p.name}
+                {p.noPitchCatch && <span className="text-[10px] font-extrabold text-accent-warm">NP/C</span>}
               </label>))}
           </div>
         </div>

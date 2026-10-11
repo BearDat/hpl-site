@@ -78,6 +78,12 @@ export default async function RosterPage(props) {
           <Field label="Roblox ID">
             <input name="robloxId" placeholder="Optional" className={inputClass}/>
           </Field>
+          <Field label="NP/C">
+            <label className="flex h-[30px] items-center gap-1.5 text-xs">
+              <input type="checkbox" name="noPitchCatch"/>
+              Can&apos;t pitch/catch
+            </label>
+          </Field>
           <div className="flex items-end">
             <button type="submit" className={buttonClass}>
               Add Player
@@ -208,10 +214,11 @@ export default async function RosterPage(props) {
               <div className="mt-2">
                 <div className="mb-2 hidden text-[10px] font-bold uppercase tracking-wide opacity-50 sm:grid sm:grid-cols-12 sm:gap-2">
                   <div className="col-span-3">Link</div>
-                  <div className="col-span-3">Name</div>
+                  <div className="col-span-2">Name</div>
                   <div className="col-span-2">Team</div>
-                  <div className="col-span-2">Status</div>
+                  <div className="col-span-1">Status</div>
                   <div className="col-span-2">Roblox ID</div>
+                  <div className="col-span-1 text-center">NP/C</div>
                 </div>
                 {group.players.map((p) => (<PlayerRow key={p.id} player={p} teams={teams}/>))}
               </div>
@@ -298,7 +305,9 @@ export default async function RosterPage(props) {
                   </span>
                 </div>
                 {t.assets.map((a) => (<div key={a.id} className="opacity-80">
-                    {a.player.name}: {a.fromTeam?.shortCode ?? "FA"} &rarr;{" "}
+                    {a.player.name}
+                    {a.player.noPitchCatch && <span className="ml-1 text-[10px] font-extrabold text-accent-warm">NP/C</span>}
+                    : {a.fromTeam?.shortCode ?? "FA"} &rarr;{" "}
                     {a.toTeam?.shortCode ?? "FA"}
                   </div>))}
                 {t.notes && <div className="mt-1 text-xs opacity-55">{t.notes}</div>}

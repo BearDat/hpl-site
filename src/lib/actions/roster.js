@@ -20,9 +20,10 @@ export async function createPlayer(formData) {
             throw new Error(`That Roblox ID is already linked to ${existing.name}. Edit that player instead of creating a new one, or use Merge Players if this is a duplicate.`);
         }
     }
+    const noPitchCatch = formData.get("noPitchCatch") != null;
     const slug = await uniquePlayerSlug(name);
     await prisma.player.create({
-        data: { name, slug, robloxId, teamId, status: teamId ? "ACTIVE" : "FREE_AGENT" },
+        data: { name, slug, robloxId, teamId, status: teamId ? "ACTIVE" : "FREE_AGENT", noPitchCatch },
     });
     revalidatePath("/admin/roster");
     revalidatePath("/");
@@ -32,6 +33,7 @@ export async function updatePlayer(playerId, formData) {
     const teamId = String(formData.get("teamId") ?? "") || null;
     const robloxId = String(formData.get("robloxId") ?? "").trim() || null;
     const status = String(formData.get("status") ?? "ACTIVE");
+    const noPitchCatch = formData.get("noPitchCatch") != null;
     if (robloxId) {
         const existing = await prisma.player.findUnique({ where: { robloxId } });
         if (existing && existing.id !== playerId) {
@@ -40,7 +42,7 @@ export async function updatePlayer(playerId, formData) {
     }
     await prisma.player.update({
         where: { id: playerId },
-        data: { name, teamId, robloxId, status },
+        data: { name, teamId, robloxId, status, noPitchCatch },
     });
     revalidatePath("/admin/roster");
     revalidatePath("/");

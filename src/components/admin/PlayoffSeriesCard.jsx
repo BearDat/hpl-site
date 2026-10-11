@@ -31,8 +31,8 @@ export function PlayoffSeriesCard({ series }) {
       {series.games.map((game) => {
             const updateWithId = updatePlayoffGame.bind(null, game.id);
             return (<div key={game.id} className="mb-1.5 flex items-center gap-2 border-b border-ink/10 pb-1.5 text-sm last:border-b-0">
-            <form action={updateWithId} className="grid flex-1 grid-cols-12 items-center gap-2">
-              <div className="col-span-3 text-xs">
+            <form action={updateWithId} className="grid flex-1 grid-cols-2 items-center gap-2 sm:grid-cols-12">
+              <div className="col-span-2 text-xs sm:col-span-3">
                 {game.awayTeam.shortCode} @ {game.homeTeam.shortCode}
                 <div className="opacity-55">
                   {game.scheduledTime ?? "—"} {game.locationCode ? `· ${game.locationCode}` : ""}
@@ -52,7 +52,7 @@ export function PlayoffSeriesCard({ series }) {
                 <option value={game.homeTeam.id}>{game.homeTeam.shortCode} (home)</option>
                 <option value={game.awayTeam.id}>{game.awayTeam.shortCode} (away)</option>
               </select>
-              <div className="col-span-1 flex justify-end">
+              <div className="col-span-2 flex justify-end sm:col-span-1">
                 <button type="submit" className={`${buttonClass} !px-2.5 !py-1.5 !text-[10px]`}>
                   Save
                 </button>

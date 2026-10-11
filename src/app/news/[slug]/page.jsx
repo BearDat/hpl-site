@@ -16,7 +16,7 @@ export default async function ArticlePage(props) {
   return (
     <div className="flex flex-1 flex-col">
       <Header />
-      <main className="flex-1 px-14 py-10">
+      <main className="flex-1 px-4 sm:px-8 lg:px-14 py-10">
         <div className="mx-auto max-w-2xl">
           <div className="mb-2 text-xs font-extrabold tracking-wide text-accent">
             {article.publishedAt.toLocaleDateString()}

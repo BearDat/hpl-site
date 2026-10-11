@@ -101,11 +101,16 @@ export default async function PlayerPage(props) {
     const seasonGroups = seasonOrder.map((id) => seasonGroupMap.get(id));
     return (<div className="flex flex-1 flex-col">
       <Header />
-      <main className="flex-1 px-14 py-10">
+      <main className="flex-1 px-4 sm:px-8 lg:px-14 py-10">
         <div className="mb-8 flex items-center gap-5 border-[3px] border-ink p-6">
           {player.team ? (<TeamCrest color={player.team.primaryColor} logoUrl={player.team.logoUrl} className="h-14 w-12 flex-shrink-0"/>) : (<div className="h-14 w-12 flex-shrink-0 bg-muted/30"/>)}
           <div>
-            <div className="font-display text-3xl">{player.name}</div>
+            <div className="font-display text-3xl">
+              {player.name}
+              {player.noPitchCatch && (<span className="ml-2 align-middle text-xs font-extrabold uppercase tracking-wide text-accent-warm" title="Cannot pitch or catch">
+                  NP/C
+                </span>)}
+            </div>
             <div className="mt-1 text-sm font-bold uppercase tracking-wide opacity-60">
               {player.team ? (<Link href={`/teams/${player.team.shortCode}`} className="hover:text-accent">
                   {player.team.name}

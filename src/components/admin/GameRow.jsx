@@ -6,8 +6,8 @@ export function GameRow({ game, teams = [] }) {
       <div className="text-xs opacity-55">
         {game.scheduledTime ?? "—"} {game.locationCode ? `· ${game.locationCode}` : ""}
       </div>
-      <form action={updateWithId} className="grid flex-1 grid-cols-12 items-center gap-2">
-        <div className="col-span-3 flex items-center gap-1">
+      <form action={updateWithId} className="grid flex-1 grid-cols-2 items-center gap-2 sm:grid-cols-12">
+        <div className="col-span-2 flex items-center gap-1 sm:col-span-3">
           <select name="awayTeamId" defaultValue={game.awayTeamId} className="w-full border border-ink/30 bg-surface px-1.5 py-1.5 text-xs font-bold">
             {teams.map((t) => (<option key={t.id} value={t.id}>{t.shortCode}</option>))}
           </select>
@@ -30,7 +30,7 @@ export function GameRow({ game, teams = [] }) {
           <option value={game.homeTeam.id}>{game.homeTeam.shortCode} (home)</option>
           <option value={game.awayTeam.id}>{game.awayTeam.shortCode} (away)</option>
         </select>
-        <div className="col-span-1 flex justify-end">
+        <div className="col-span-2 flex justify-end sm:col-span-1">
           <button type="submit" className={`${buttonClass} !px-2.5 !py-1.5 !text-[10px]`}>
             Save
           </button>

@@ -11,7 +11,7 @@ export default async function NewsPage() {
   return (
     <div className="flex flex-1 flex-col">
       <Header />
-      <main className="flex-1 px-14 py-10">
+      <main className="flex-1 px-4 sm:px-8 lg:px-14 py-10">
         <h1 className="mb-8 font-display text-2xl">NEWS</h1>
 
         {articles.length === 0 ? (

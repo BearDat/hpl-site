@@ -35,7 +35,7 @@ function ScoreCard({ game, first }) {
 export function ScoresRibbon({ games }) {
   if (games.length === 0) return null;
   return (
-    <div className="flex overflow-x-auto border-b-[3px] border-ink bg-brand px-14">
+    <div className="flex overflow-x-auto border-b-[3px] border-ink bg-brand px-4 sm:px-8 lg:px-14">
       {games.map((game, i) => (
         <ScoreCard key={game.id} game={game} first={i === 0} />
       ))}

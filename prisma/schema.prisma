@@ -158,6 +158,7 @@ model Player {
   robloxId  String?      @unique
   teamId    String?
   status    PlayerStatus @default(FREE_AGENT)
+  noPitchCatch Boolean   @default(false)
   createdAt DateTime     @default(now())
 
   team               Team?                 @relation(fields: [teamId], references: [id], onDelete: SetNull)

@@ -11,7 +11,7 @@ export default async function AwardsPage() {
   return (
     <div className="flex flex-1 flex-col">
       <Header />
-      <main className="flex-1 px-14 py-10">
+      <main className="flex-1 px-4 sm:px-8 lg:px-14 py-10">
         <h1 className="mb-1 font-display text-2xl">AWARDS</h1>
         <p className="mb-8 text-sm opacity-60">League award history, season by season</p>
 

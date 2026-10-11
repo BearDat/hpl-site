@@ -6,7 +6,7 @@ export default function RootError({ error, retry }) {
   return (
     <div className="flex flex-1 flex-col">
       <Header />
-      <main className="flex flex-1 flex-col items-start justify-center gap-4 px-14 py-20">
+      <main className="flex flex-1 flex-col items-start justify-center gap-4 px-4 sm:px-8 lg:px-14 py-20">
         <h1 className="font-display text-2xl">Something went wrong</h1>
         <p className="max-w-xl text-sm opacity-70">
           {error?.message || "An unexpected error occurred loading this page."}

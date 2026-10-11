@@ -16,7 +16,7 @@ export default async function StandingsPage() {
     if (!season) {
         return (<div className="flex flex-1 flex-col">
         <Header />
-        <main className="flex-1 px-14 py-10">
+        <main className="flex-1 px-4 sm:px-8 lg:px-14 py-10">
           <p className="text-sm opacity-60">No current season is set.</p>
         </main>
         <Footer />
@@ -29,7 +29,7 @@ export default async function StandingsPage() {
     const rounds = playoffsStarted ? await getPlayoffBracket(season.id) : [];
     return (<div className="flex flex-1 flex-col">
       <Header />
-      <main className="flex-1 px-14 py-10">
+      <main className="flex-1 px-4 sm:px-8 lg:px-14 py-10">
         <h1 className="mb-1 font-display text-2xl">STANDINGS</h1>
         <p className="mb-2 text-sm opacity-60">{season.name}</p>
         <p className="mb-8 text-xs opacity-50">
