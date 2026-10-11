@@ -66,7 +66,7 @@ export default async function PlayoffsPage() {
           {rounds.get(round).map((s) => (<PlayoffSeriesCard key={s.id} series={s}/>))}
         </Panel>))}
 
-      <Panel title="Create Series Manually">
+      <Panel title="Create Series Manually" collapsible defaultOpen={false}>
         <form action={createSeriesManually} className="grid grid-cols-2 gap-4 sm:grid-cols-6">
           <input type="hidden" name="seasonId" value={season.id}/>
           <Field label="Round #">

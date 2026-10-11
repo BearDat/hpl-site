@@ -1,8 +1,17 @@
-export function Panel({ title, children, }) {
-    return (<div className="mb-5 border-2 border-ink bg-surface p-4">
+export function Panel({ title, children, collapsible = false, defaultOpen = true, }) {
+    if (!collapsible) {
+        return (<div className="mb-5 border-2 border-ink bg-surface p-4">
       <h2 className="mb-3 font-display text-base">{title}</h2>
       {children}
     </div>);
+    }
+    return (<details className="group mb-5 border-2 border-ink bg-surface" open={defaultOpen}>
+      <summary className="flex cursor-pointer list-none items-center justify-between p-4 font-display text-base">
+        {title}
+        <span className="text-sm opacity-45 transition-transform group-open:rotate-180">▾</span>
+      </summary>
+      <div className="px-4 pb-4">{children}</div>
+    </details>);
 }
 export const inputClass = "w-full border border-ink/30 bg-surface px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none";
 export const labelClass = "mb-0.5 block text-[10px] font-bold uppercase tracking-wide opacity-60";

@@ -269,12 +269,35 @@ const STAT_CATEGORIES = [
     { key: "rbi", label: "RBI", better: "higher", format: (v) => String(v) },
     { key: "era", label: "ERA", better: "lower", format: (v) => v.toFixed(2) },
     { key: "stolenBases", label: "SB", better: "higher", format: (v) => String(v) },
+    { key: "war", label: "WAR", better: "higher", format: (v) => v.toFixed(1) },
 ];
+// A simplified Wins Above Replacement approximation: runs above a rough
+// replacement-level OPS (.600) for batting, plus runs saved below a
+// replacement-level ERA (5.00) for pitching, divided by ~10 runs/win.
+// There's no defense/baserunning/park data to work with, so this is a
+// rough offense-and-pitching-only estimate, not a sabermetric-exact stat.
+export function computeWAR(stat) {
+    let war = 0;
+    let has = false;
+    if (stat.atBats != null && stat.atBats >= 10 && stat.onBasePct != null && stat.slugging != null) {
+        const ops = stat.onBasePct + stat.slugging;
+        war += ((ops - 0.6) * 4.5 * (stat.atBats / 25)) / 10;
+        has = true;
+    }
+    if (stat.inningsPitched != null && stat.inningsPitched >= 3 && stat.era != null) {
+        war += (((5.0 - stat.era) / 9) * stat.inningsPitched) / 10;
+        has = true;
+    }
+    return has ? war : null;
+}
+function withWar(stats) {
+    return stats.map((s) => ({ ...s, war: computeWAR(s) }));
+}
 export async function getStatLeaders(seasonId) {
-    const stats = await prisma.playerSeasonStat.findMany({
+    const stats = withWar(await prisma.playerSeasonStat.findMany({
         where: { seasonId, isPlayoffs: false },
         include: { player: { include: { team: true } } },
-    });
+    }));
     return STAT_CATEGORIES
         .map((cat) => {
         const withStat = stats.filter((s) => typeof s[cat.key] === "number");
@@ -298,10 +321,10 @@ export async function getStatLeaders(seasonId) {
         .filter((x) => x !== null);
 }
 export async function getFullStatLeaders(seasonId, n = 10) {
-    const stats = await prisma.playerSeasonStat.findMany({
+    const stats = withWar(await prisma.playerSeasonStat.findMany({
         where: { seasonId, isPlayoffs: false },
         include: { player: { include: { team: true } } },
-    });
+    }));
     return STAT_CATEGORIES.map((cat) => {
         const withStat = stats
             .filter((s) => typeof s[cat.key] === "number")
@@ -529,4 +552,98 @@ export async function getTeamDetail(shortCode, seasonId) {
         games: games.map(toScoreboardGame),
         record: record.find((t) => t.id === team.id) ?? null,
     };
+}
+// Season-by-season record + playoff result for every season a team has
+// played in, used on the team manager page.
+async function getTeamHistory(teamId) {
+    const seasonTeams = await prisma.seasonTeam.findMany({
+        where: { teamId },
+        include: { season: true, division: true },
+        orderBy: { season: { createdAt: "desc" } },
+    });
+    const results = [];
+    for (const st of seasonTeams) {
+        const [games, playoffSeries] = await Promise.all([
+            prisma.game.findMany({
+                where: { seasonId: st.seasonId, playoffSeriesId: null, OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }] },
+            }),
+            prisma.playoffSeries.findMany({
+                where: { seasonId: st.seasonId, OR: [{ teamAId: teamId }, { teamBId: teamId }] },
+                orderBy: { round: "desc" },
+            }),
+        ]);
+        let wins = 0;
+        let losses = 0;
+        for (const g of games) {
+            const winner = decideWinner(g);
+            if (!winner)
+                continue;
+            const teamIsHome = g.homeTeamId === teamId;
+            if ((winner === "home") === teamIsHome)
+                wins += 1;
+            else
+                losses += 1;
+        }
+        const isChampion = st.season.championTeamId === teamId;
+        const deepest = playoffSeries[0] ?? null;
+        results.push({
+            season: st.season,
+            division: st.division?.name ?? null,
+            wins,
+            losses,
+            champion: isChampion,
+            madePlayoffs: playoffSeries.length > 0,
+            playoffResult: isChampion
+                ? "League Champion"
+                : deepest
+                    ? `Eliminated — ${deepest.roundName ?? `Round ${deepest.round}`}`
+                    : null,
+        });
+    }
+    return results;
+}
+export async function getComparePlayerOptions() {
+    return prisma.player.findMany({
+        select: { slug: true, name: true, team: { select: { name: true, shortCode: true } } },
+        orderBy: { name: "asc" },
+    });
+}
+export async function getPlayersForCompare(slugs) {
+    if (!slugs || slugs.length === 0)
+        return [];
+    const players = await prisma.player.findMany({
+        where: { slug: { in: slugs } },
+        include: { team: true, seasonStats: true },
+    });
+    const bySlug = new Map(players.map((p) => [p.slug, p]));
+    return slugs.map((s) => bySlug.get(s)).filter(Boolean).map((p) => {
+        const regular = p.seasonStats.filter((s) => !s.isPlayoffs);
+        const career = computeCareerTotals(regular);
+        return {
+            slug: p.slug,
+            name: p.name,
+            team: p.team,
+            status: p.status,
+            noPitchCatch: p.noPitchCatch,
+            career,
+            war: career ? computeWAR(career) : null,
+        };
+    });
+}
+export async function getManagerPage(shortCode) {
+    const team = await prisma.team.findUnique({ where: { shortCode } });
+    if (!team || !team.managerName)
+        return null;
+    const [history, asPlayer] = await Promise.all([
+        getTeamHistory(team.id),
+        prisma.player.findFirst({
+            where: { name: { equals: team.managerName, mode: "insensitive" } },
+            include: {
+                team: true,
+                seasonStats: { include: { season: true }, orderBy: [{ season: { createdAt: "desc" } }, { isPlayoffs: "asc" }] },
+                awards: { include: { season: true }, orderBy: { createdAt: "desc" } },
+            },
+        }),
+    ]);
+    return { team, history, asPlayer };
 }

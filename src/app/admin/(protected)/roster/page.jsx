@@ -137,7 +137,7 @@ export default async function RosterPage(props) {
           </form>
         </Panel>)}
 
-      <Panel title="Import Roster from CSV">
+      <Panel title="Import Roster from CSV" collapsible defaultOpen={false}>
         <p className="mb-3 text-sm opacity-60">
           Upload a roster export (teams laid out side by side, one player per row).
           You&apos;ll get a chance to map each CSV team to one of your real teams before
@@ -159,7 +159,7 @@ export default async function RosterPage(props) {
         </form>
       </Panel>
 
-      <Panel title="Sign a Free Agent">
+      <Panel title="Sign a Free Agent" collapsible defaultOpen={false}>
         <form action={signPlayer} className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <Field label="Player">
             <select name="playerId" required className={inputClass}>
@@ -183,7 +183,7 @@ export default async function RosterPage(props) {
         </form>
       </Panel>
 
-      <Panel title="Release a Player">
+      <Panel title="Release a Player" collapsible defaultOpen={false}>
         <form action={releasePlayer} className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <Field label="Player">
             <select name="playerId" required className={inputClass}>
@@ -200,7 +200,7 @@ export default async function RosterPage(props) {
         </form>
       </Panel>
 
-      <Panel title="Trade">
+      <Panel title="Trade" collapsible defaultOpen={false}>
         <TradeForm teams={teams} activePlayers={activePlayers}/>
       </Panel>
 
@@ -226,7 +226,7 @@ export default async function RosterPage(props) {
         </div>
       </Panel>
 
-      <Panel title="Merge Players">
+      <Panel title="Merge Players" collapsible defaultOpen={false}>
         <p className="mb-3 text-sm opacity-60">
           If the same Roblox user got two Player rows (e.g. a username change wasn&apos;t
           caught in time), merge the duplicate into the one to keep. Transactions,
@@ -293,7 +293,7 @@ export default async function RosterPage(props) {
           </div>
         </Panel>)}
 
-      <Panel title="Recent Transactions">
+      <Panel title="Recent Transactions" collapsible defaultOpen={false}>
         {transactions.length === 0 ? (<p className="text-sm opacity-60">No transactions yet.</p>) : (<div className="flex flex-col gap-3">
             {transactions.map((t) => (<div key={t.id} className="border-b border-ink/10 pb-3 text-sm last:border-b-0">
                 <div className="mb-1 flex items-center gap-2">

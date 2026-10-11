@@ -53,7 +53,7 @@ export default async function NewsPage() {
         {articles.length === 0 ? (<p className="text-sm opacity-60">No articles yet.</p>) : (articles.map((a) => <ArticleRow key={a.id} article={a}/>))}
       </Panel>
 
-      <Panel title="Add Image / Video / Highlight">
+      <Panel title="Add Image / Video / Highlight" collapsible defaultOpen={false}>
         <form action={addMedia} encType="multipart/form-data" className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Field label="File">
             <input type="file" name="file" required accept="image/*,video/*" className="text-xs"/>

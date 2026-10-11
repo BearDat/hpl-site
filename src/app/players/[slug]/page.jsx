@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { TeamCrest } from "@/components/TeamCrest";
-import { getPlayerBySlug, computeCareerTotals } from "@/lib/queries";
+import { getPlayerBySlug, computeCareerTotals, computeWAR } from "@/lib/queries";
+import { getAvatarUrl } from "@/lib/roblox";
 export const dynamic = "force-dynamic";
 const BATTING_FIELDS = [
     { key: "gamesPlayed", label: "GP" },
@@ -57,9 +58,11 @@ function StatBlock({ label, stat }) {
     const showPitching = hasAny(stat, PITCHING_FIELDS);
     if (!showBatting && !showPitching)
         return null;
+    const war = computeWAR(stat);
     return (<div className="mb-4 last:mb-0">
-      <div className="mb-2 text-[10px] font-extrabold uppercase tracking-wide text-accent">
+      <div className="mb-2 flex items-center gap-3 text-[10px] font-extrabold uppercase tracking-wide text-accent">
         {label}
+        {war != null && <span className="opacity-80">WAR {war.toFixed(1)}</span>}
       </div>
       {showBatting && (<div className="mb-3">
           <div className="mb-2 text-[10px] font-extrabold uppercase tracking-wide opacity-45">
@@ -81,6 +84,7 @@ export default async function PlayerPage(props) {
     if (!result)
         notFound();
     const { player, transactions } = result;
+    const avatarUrl = await getAvatarUrl(player.robloxId);
     const regularStats = player.seasonStats.filter((s) => !s.isPlayoffs);
     const playoffStats = player.seasonStats.filter((s) => s.isPlayoffs);
     const regularCareer = computeCareerTotals(regularStats);
@@ -103,7 +107,11 @@ export default async function PlayerPage(props) {
       <Header />
       <main className="flex-1 px-4 sm:px-8 lg:px-14 py-10">
         <div className="mb-8 flex items-center gap-5 border-[3px] border-ink p-6">
-          {player.team ? (<TeamCrest color={player.team.primaryColor} logoUrl={player.team.logoUrl} className="h-14 w-12 flex-shrink-0"/>) : (<div className="h-14 w-12 flex-shrink-0 bg-muted/30"/>)}
+          {avatarUrl ? (
+            // Roblox-hosted avatar thumbnail; dimensions vary per user.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt={`${player.name}'s Roblox avatar`} className="h-16 w-16 flex-shrink-0 rounded-full border-2 border-ink object-cover" style={player.team ? { borderColor: player.team.primaryColor } : undefined}/>
+          ) : player.team ? (<TeamCrest color={player.team.primaryColor} logoUrl={player.team.logoUrl} className="h-14 w-12 flex-shrink-0"/>) : (<div className="h-14 w-12 flex-shrink-0 bg-muted/30"/>)}
           <div>
             <div className="font-display text-3xl">
               {player.name}

@@ -93,7 +93,7 @@ export default async function SchedulePage(props) {
           </form>
         </Panel>)}
 
-      <Panel title="Add a Game">
+      <Panel title="Add a Game" collapsible defaultOpen={false}>
         <form action={createGame} className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <input type="hidden" name="seasonId" value={season.id}/>
           <Field label="Round">
@@ -128,7 +128,7 @@ export default async function SchedulePage(props) {
         </form>
       </Panel>
 
-      <Panel title="Bulk Import from Text">
+      <Panel title="Bulk Import from Text" collapsible defaultOpen={false}>
         <BulkImportForm seasonId={season.id}/>
       </Panel>
 

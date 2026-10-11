@@ -1,4 +1,5 @@
 const USERNAMES_ENDPOINT = "https://users.roblox.com/v1/usernames/users";
+const AVATAR_ENDPOINT = "https://thumbnails.roblox.com/v1/users/avatar-headshot";
 const BATCH_SIZE = 50;
 
 function chunk(arr, size) {
@@ -38,4 +39,23 @@ export async function resolveRobloxIds(usernames) {
     }
   }
   return result;
+}
+
+/**
+ * Fetches a player's Roblox avatar headshot thumbnail URL. Best-effort —
+ * returns null if the Roblox API is unreachable, the user has no avatar
+ * yet, or no robloxId is on record.
+ */
+export async function getAvatarUrl(robloxId, size = "150x150") {
+  if (!robloxId) return null;
+  try {
+    const url = `${AVATAR_ENDPOINT}?userIds=${encodeURIComponent(robloxId)}&size=${size}&format=Png&isCircular=false`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const body = await res.json();
+    const entry = body.data?.[0];
+    return entry?.state === "Completed" ? entry.imageUrl : null;
+  } catch {
+    return null;
+  }
 }

@@ -137,7 +137,7 @@ export default async function LeaguePage() {
             </form>
           </Panel>
 
-          <Panel title="Playoff Format">
+          <Panel title="Playoff Format" collapsible defaultOpen={false}>
             <form action={updatePlayoffFormatForSeason} className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label={current.playoffByDivision ? "Playoff teams (per division)" : "Playoff teams (league-wide)"}>
                 <input type="number" name="playoffTeamCount" defaultValue={current.playoffTeamCount} className={inputClass}/>

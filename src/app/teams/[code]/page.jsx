@@ -24,7 +24,12 @@ export default async function TeamDetailPage(props) {
           <div>
             <div className="font-display text-3xl">{team.name}</div>
             {team.managerName && (
-              <div className="mt-1 text-sm opacity-70">Team Manager: {team.managerName}</div>
+              <div className="mt-1 text-sm opacity-70">
+                Team Manager:{" "}
+                <Link href={`/teams/${team.shortCode}/manager`} className="font-bold hover:text-accent">
+                  {team.managerName}
+                </Link>
+              </div>
             )}
             {record && (
               <div className="mt-1 text-sm font-bold uppercase tracking-wide opacity-60">
